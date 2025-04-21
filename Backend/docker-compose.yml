@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "0.0.0.0:8000:8000"
+    environment:
+      - MONGO_URI=mongodb://root:root@mongodb:27017
+      - SECRET_KEY=ajkhflkjalkvjhaiuajkvhp40t76208r7yjnflkwufoi7
+    volumes:
+      - ./certs:/app/certs
+    networks:
+      - app-network
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
