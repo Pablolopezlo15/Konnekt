@@ -234,3 +234,88 @@ async def login(user: UserLogin):
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+# Add after the existing models
+class PostCreate(BaseModel):
+    content: str
+    image_url: Optional[str] = None
+    location: Optional[str] = None
+
+class PostResponse(BaseModel):
+    id: str
+    author_id: str
+    author_username: str
+    content: str
+    image_url: Optional[str] = None
+    location: Optional[str] = None
+    likes: List[str] = []
+    comments: List[Dict] = []
+    created_at: str
+
+# Add after existing collections
+posts_collection = db.posts
+
+# Add these new endpoints before the end of the file
+@app.post("/posts", response_model=PostResponse)
+async def create_post(post: PostCreate, token: str = Header(...)):
+    try:
+        # Decode token to get user info
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload["user_id"]
+        username = payload["username"]
+        
+        post_doc = {
+            "author_id": user_id,
+            "author_username": username,
+            "content": post.content,
+            "image_url": post.image_url,
+            "location": post.location,
+            "likes": [],
+            "comments": [],
+            "created_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        }
+        
+        result = await posts_collection.insert_one(post_doc)
+        post_doc["id"] = str(result.inserted_id)
+        
+        return PostResponse(**post_doc)
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+@app.get("/posts", response_model=List[PostResponse])
+async def get_posts(skip: int = 0, limit: int = 10):
+    posts = await posts_collection.find().skip(skip).limit(limit).sort("created_at", -1).to_list(limit)
+    return [PostResponse(id=str(post["_id"]), **{k:v for k,v in post.items() if k != "_id"}) for post in posts]
+
+@app.get("/posts/{user_id}", response_model=List[PostResponse])
+async def get_user_posts(user_id: str):
+    posts = await posts_collection.find({"author_id": user_id}).sort("created_at", -1).to_list(100)
+    return [PostResponse(id=str(post["_id"]), **{k:v for k,v in post.items() if k != "_id"}) for post in posts]
+
+@app.put("/posts/{post_id}/like")
+async def like_post(post_id: str, token: str = Header(...)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload["user_id"]
+        
+        post = await posts_collection.find_one({"_id": ObjectId(post_id)})
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+        
+        if user_id in post["likes"]:
+            # Unlike
+            await posts_collection.update_one(
+                {"_id": ObjectId(post_id)},
+                {"$pull": {"likes": user_id}}
+            )
+        else:
+            # Like
+            await posts_collection.update_one(
+                {"_id": ObjectId(post_id)},
+                {"$push": {"likes": user_id}}
+            )
+        
+        updated_post = await posts_collection.find_one({"_id": ObjectId(post_id)})
+        return {"likes": updated_post["likes"]}
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")

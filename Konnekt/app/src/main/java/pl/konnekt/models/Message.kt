@@ -10,7 +10,8 @@ data class Message(
     val sender_id: String,
     val recipient_id: String,
     val message: String,
-    val timestamp: String
+    val timestamp: String,
+    val isRead: Boolean = false,
 )
 
 // Add this extension function to the Message class

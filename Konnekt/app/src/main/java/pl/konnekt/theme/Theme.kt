@@ -52,7 +52,7 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun KonnektTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // changed from true to false
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

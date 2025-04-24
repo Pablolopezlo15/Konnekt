@@ -1,0 +1,216 @@
+from fastapi import APIRouter, HTTPException, Query
+from typing import List
+from ..models.user import UserCreate, UserResponse, UserLogin
+from ..utils.auth import pwd_context, create_access_token
+from ..database import users_collection
+
+router = APIRouter()
+
+@router.post("/register", response_model=UserResponse)
+async def register(user: UserCreate):
+    if await users_collection.find_one({"username": user.username}):
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    hashed_password = pwd_context.hash(user.password)
+    
+    user_doc = {
+        "username": user.username,
+        "password": hashed_password,
+        "email": user.email,
+        "phone": user.phone,
+        "birth_date": user.birth_date,
+        "profile_image_url": user.profile_image_url,
+        "followers": [],
+        "following": []
+    }
+    
+    result = await users_collection.insert_one(user_doc)
+    response_doc = {
+        "id": str(result.inserted_id),
+        "username": user_doc["username"],
+        "email": user_doc["email"],
+        "phone": user_doc["phone"],
+        "birth_date": user_doc["birth_date"],
+        "profile_image_url": user_doc["profile_image_url"],
+        "followers": user_doc["followers"],
+        "following": user_doc["following"]
+    }
+
+    return UserResponse(**response_doc)
+
+@router.get("/users", response_model=List[UserResponse])
+async def get_users():
+    users = await users_collection.find().to_list(1000)
+    response_users = []
+    for user in users:
+        response_users.append({
+            "id": str(user["_id"]),
+            "username": user["username"],
+            "email": user["email"],
+            "profile_image_url": user.get("profile_image_url"),
+            "phone": user.get("phone"),
+            "birth_date": user.get("birth_date"),
+            "followers": user.get("followers", []),
+            "following": user.get("following", [])
+        })
+    
+    return [UserResponse(**user) for user in response_users]
+
+@router.get("/users/search", response_model=List[UserResponse])
+async def search_users(username: str = Query(..., min_length=1)):
+    try:
+        search_pattern = f".*{username}.*"
+        print(f"Searching with pattern: {search_pattern}")
+        
+        users = await users_collection.find({
+            "username": {"$regex": search_pattern, "$options": "i"}
+        }).limit(20).to_list(20)
+        
+        print(f"Found {len(users)} users")
+        
+        response_users = []
+        for user in users:
+            response_users.append({
+                "id": str(user["_id"]),
+                "username": user["username"],
+                "email": user["email"],
+                "profile_image_url": user.get("profile_image_url"),
+                "phone": user.get("phone"),
+                "birth_date": user.get("birth_date"),
+                "followers": user.get("followers", []),
+                "following": user.get("following", [])
+            })
+        
+        return [UserResponse(**user) for user in response_users]
+    except Exception as e:
+        print(f"Error in search: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/login")
+async def login(user: UserLogin):
+    db_user = await users_collection.find_one({"username": user.username})
+    if not db_user or not pwd_context.verify(user.password, db_user["password"]):
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    
+    token_data = {
+        "user_id": str(db_user["_id"]),
+        "profile_image_url": db_user.get("profile_image_url"),
+        "phone": db_user.get("phone"),
+        "birth_date": db_user.get("birth_date"),
+        "followers": db_user.get("followers", []),
+        "following": db_user.get("following", []),
+        "email": db_user["email"],
+        "username": db_user["username"]
+    }
+    
+    access_token = create_access_token(token_data)
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user_profile(user_id: str):
+    try:
+        from bson import ObjectId
+        user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        return UserResponse(
+            id=str(user["_id"]),
+            username=user["username"],
+            email=user["email"],
+            profile_image_url=user.get("profile_image_url"),
+            phone=user.get("phone"),
+            birth_date=user.get("birth_date"),
+            followers=user.get("followers", []),
+            following=user.get("following", [])
+        )
+    except Exception as e:
+        print(f"Error getting user profile: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+@router.post("/users/{user_id}/unfollow", response_model=UserResponse)
+async def unfollow_user(user_id: str, current_user_id: str):
+    try:
+        # Verificar que el usuario a dejar de seguir existe
+        user_to_unfollow = await users_collection.find_one({"_id": ObjectId(user_id)})
+        if not user_to_unfollow:
+            raise HTTPException(status_code=404, detail="User to unfollow not found")
+
+        # Verificar que el usuario actual existe
+        current_user = await users_collection.find_one({"_id": ObjectId(current_user_id)})
+        if not current_user:
+            raise HTTPException(status_code=404, detail="Current user not found")
+
+        # Actualizar la lista de seguidores y seguidos
+        if current_user_id in user_to_unfollow.get("followers", []):
+            await users_collection.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$pull": {"followers": current_user_id}}
+            )
+        if user_id in current_user.get("following", []):
+            await users_collection.update_one(
+                {"_id": ObjectId(current_user_id)},
+                {"$pull": {"following": user_id}}
+            )
+
+        # Retornar el perfil actualizado del usuario dejado de seguir
+        updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        return UserResponse(
+            id=str(updated_user["_id"]),
+            username=updated_user["username"],
+            email=updated_user["email"],
+            profile_image_url=updated_user.get("profile_image_url"),
+            phone=updated_user.get("phone"),
+            birth_date=updated_user.get("birth_date"),
+            followers=updated_user.get("followers", []),
+            following=updated_user.get("following", [])
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/users/{user_id}/follow", response_model=UserResponse)
+async def follow_user(user_id: str, current_user_id: str):
+    try:
+        # Verificar que el usuario a seguir existe
+        user_to_follow = await users_collection.find_one({"_id": ObjectId(user_id)})
+        if not user_to_follow:
+            raise HTTPException(status_code=404, detail="User to follow not found")
+
+        # Verificar que el usuario actual existe
+        current_user = await users_collection.find_one({"_id": ObjectId(current_user_id)})
+        if not current_user:
+            raise HTTPException(status_code=404, detail="Current user not found")
+
+        # Evitar seguir a sí mismo
+        if user_id == current_user_id:
+            raise HTTPException(status_code=400, detail="You cannot follow yourself")
+
+        # Actualizar la lista de seguidores y seguidos
+        if current_user_id not in user_to_follow.get("followers", []):
+            await users_collection.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$push": {"followers": current_user_id}}
+            )
+        if user_id not in current_user.get("following", []):
+            await users_collection.update_one(
+                {"_id": ObjectId(current_user_id)},
+                {"$push": {"following": user_id}}
+            )
+
+        # Retornar el perfil actualizado del usuario seguido
+        updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        return UserResponse(
+            id=str(updated_user["_id"]),
+            username=updated_user["username"],
+            email=updated_user["email"],
+            profile_image_url=updated_user.get("profile_image_url"),
+            phone=updated_user.get("phone"),
+            birth_date=updated_user.get("birth_date"),
+            followers=updated_user.get("followers", []),
+            following=updated_user.get("following", [])
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

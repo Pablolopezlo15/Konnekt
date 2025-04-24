@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -42,7 +43,7 @@ fun AuthComponent(
     var birthDate by remember { mutableStateOf("") }
 
     val pagerState = rememberPagerState(initialPage = 0)
-    val tabs = listOf("Login", "Registro")
+    val tabs = listOf("Iniciar Sesión", "Registro")
 
     Box(
         modifier = Modifier
@@ -169,7 +170,7 @@ fun ModernLoginForm(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Welcome Back",
+            text = "Bienvenido de nuevo",
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontSize = 32.sp,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
@@ -179,7 +180,7 @@ fun ModernLoginForm(
         )
 
         Text(
-            text = "Sign in to continue",
+            text = "Inicia sesión para continuar",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 8.dp)
@@ -198,7 +199,7 @@ fun ModernLoginForm(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            placeholder = { Text("Username") },
+            placeholder = { Text("Usuario") },
             singleLine = true,
             enabled = enabled,
             shape = RoundedCornerShape(16.dp),
@@ -222,7 +223,7 @@ fun ModernLoginForm(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            placeholder = { Text("Password") },
+            placeholder = { Text("Contraseña") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -261,7 +262,7 @@ fun ModernLoginForm(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Sign In",
+                    text = "Iniciar Sesión",
                     color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
@@ -294,7 +295,7 @@ fun ModernRegisterForm(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Create Account",
+            text = "Crear Cuenta",
             style = MaterialTheme.typography.headlineLarge.copy(
                 fontSize = 32.sp,
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
@@ -304,12 +305,13 @@ fun ModernRegisterForm(
         )
 
         Text(
-            text = "Join us today",
+            text = "Únete hoy",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
+        // Update all placeholders
         OutlinedTextField(
             value = username,
             onValueChange = onUsernameChange,
@@ -323,7 +325,7 @@ fun ModernRegisterForm(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            placeholder = { Text("Username") },
+            placeholder = { Text("Usuario") },
             singleLine = true,
             enabled = enabled,
             shape = RoundedCornerShape(16.dp),
@@ -372,7 +374,7 @@ fun ModernRegisterForm(
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            placeholder = { Text("Password") },
+            placeholder = { Text("Contraseña") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -394,11 +396,11 @@ fun ModernRegisterForm(
             leadingIcon = {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_lock),
-                    contentDescription = "Confirm Password",
+                    contentDescription = "Confirmar Contraseña",
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            placeholder = { Text("Confirm Password") },
+            placeholder = { Text("Confirmar Contraseña") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -420,11 +422,12 @@ fun ModernRegisterForm(
             leadingIcon = {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_phone), // Add your phone icon
-                    contentDescription = "Phone",
-                    tint = MaterialTheme.colorScheme.primary
+                    contentDescription = "Teléfono",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.scale(0.5f)
                 )
             },
-            placeholder = { Text("Phone (optional)") },
+            placeholder = { Text("Teléfono") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             enabled = enabled,
@@ -445,11 +448,11 @@ fun ModernRegisterForm(
             leadingIcon = {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_calendar), // Add your calendar icon
-                    contentDescription = "Birth Date",
+                    contentDescription = "Fecha Nacimiento",
                     tint = MaterialTheme.colorScheme.primary
                 )
             },
-            placeholder = { Text("Birth Date (optional)") },
+            placeholder = { Text("Fecha Nacimiento") },
             singleLine = true,
             enabled = enabled,
             shape = RoundedCornerShape(16.dp),
@@ -486,7 +489,7 @@ fun ModernRegisterForm(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Sign Up",
+                    text = "Registrarse",
                     color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
@@ -496,3 +499,6 @@ fun ModernRegisterForm(
         }
     }
 }
+
+// Update the tabs list
+val tabs = listOf("Iniciar Sesión", "Registro")

@@ -17,7 +17,7 @@ data class User(
 fun createPabloUser() = User(
     id = "user123",
     username = "pablo",
-    profileImageUrl = null,
+    profileImageUrl = "https://picsum.photos/400/348",
     email = "pablo@example.com",
     phone = null,
     birthDate = null,

@@ -1,5 +1,6 @@
 package pl.konnekt.network
 
+import okhttp3.MultipartBody
 import pl.konnekt.models.*
 import retrofit2.http.*
 
@@ -17,10 +18,16 @@ interface KonnektApiService {
     suspend fun register(@Body userCreate: UserCreate): UserResponse
 
     @POST("users/{userId}/follow")
-    suspend fun followUser(@Path("userId") userId: String): User
+    suspend fun followUser(
+        @Path("userId") userId: String,
+        @Query("current_user_id") currentUserId: String
+    ): User
 
-    @DELETE("users/{userId}/unfollow")
-    suspend fun unfollowUser(@Path("userId") userId: String): User
+    @POST("users/{userId}/unfollow")
+    suspend fun unfollowUser(
+        @Path("userId") userId: String,
+        @Query("current_user_id") currentUserId: String
+    ): User
 
     @GET("users/{userId}/followers")
     suspend fun getUserFollowers(@Path("userId") userId: String): List<User>
@@ -36,4 +43,14 @@ interface KonnektApiService {
 
     @GET("messages/{chatId}")
     suspend fun getMessages(@Path("chatId") chatId: String): List<Message>
+
+    @GET("users/search")
+    suspend fun searchUsers(@Query("username") query: String): List<User>
+
+    @Multipart
+    @POST("upload")
+    suspend fun uploadImage(
+        @Part image: MultipartBody.Part
+    ): ImageUploadResponse
+
 }

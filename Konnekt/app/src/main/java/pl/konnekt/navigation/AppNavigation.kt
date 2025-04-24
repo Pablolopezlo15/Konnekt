@@ -5,6 +5,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -18,6 +19,8 @@ import pl.konnekt.viewmodel.ChatViewModel
 import pl.konnekt.viewmodel.UserListViewModel
 import pl.konnekt.viewmodel.UserViewModel
 import pl.konnekt.viewmodels.AuthViewModel
+import pl.konnekt.ui.screens.UserSearchScreen
+import pl.konnekt.viewmodel.UserSearchViewModel
 
 @Composable
 fun AppNavigation(
@@ -26,36 +29,10 @@ fun AppNavigation(
     token: String,
     onLogout: () -> Unit
 ) {
-    val userListViewModel = remember { UserListViewModel() }
-
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
-        modifier = modifier,
-        enterTransition = {
-            slideInHorizontally(
-                initialOffsetX = { fullWidth -> fullWidth },
-                animationSpec = tween(200)
-            )
-        },
-        exitTransition = {
-            slideOutHorizontally(
-                targetOffsetX = { fullWidth -> -fullWidth },
-                animationSpec = tween(200)
-            )
-        },
-        popEnterTransition = {
-            slideInHorizontally(
-                initialOffsetX = { fullWidth -> -fullWidth },
-                animationSpec = tween(200)
-            )
-        },
-        popExitTransition = {
-            slideOutHorizontally(
-                targetOffsetX = { fullWidth -> fullWidth },
-                animationSpec = tween(200)
-            )
-        }
+        modifier = modifier
     ) {
         composable(Screen.Home.route) {
             MainScreen(modifier = Modifier)
@@ -77,8 +54,13 @@ fun AppNavigation(
             )
         }
         
-        composable(Screen.Profile.route) {
-            val userId = TokenDecoder.getUserIdFromToken(token)
+        composable(
+            route = Screen.Profile.route,
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
             val userViewModel = remember { UserViewModel() }
             
             LaunchedEffect(userId) {
@@ -100,44 +82,59 @@ fun AppNavigation(
                     followers = emptyList(),
                     following = emptyList()
                 ),
-                onLogout = {
-                    onLogout()
-                    navController.navigate(Screen.Auth.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                }
+                onLogout = onLogout,
+                currentUserId = TokenDecoder.getUserIdFromToken(token)
             )
         }
-        
+
         composable(Screen.UserList.route) {
-            LaunchedEffect(Unit) {
-                userListViewModel.loadUsers()
-            }
+            val userListViewModel = remember { UserListViewModel() }
             UserListScreen(
                 viewModel = userListViewModel,
                 navController = navController
             )
         }
-        
+
+        composable(Screen.Search.route) {
+            val searchViewModel = remember { UserSearchViewModel() }
+            UserSearchScreen(
+                viewModel = searchViewModel,
+                onUserClick = { userId ->
+                    navController.navigate("profile/$userId")  // Changed to use string directly
+                }
+            )
+        }
+
         composable(
             route = Screen.Chat.route,
             arguments = listOf(navArgument("userId") { type = NavType.StringType })
         ) { backStackEntry ->
             val recipientId = backStackEntry.arguments?.getString("userId") ?: return@composable
-            val chatViewModel = remember(recipientId) { 
+            val context = LocalContext.current
+            val chatViewModel = remember(recipientId) {
                 ChatViewModel(
                     currentUserId = TokenDecoder.getUserIdFromToken(token) ?: "",
                     recipientId = recipientId
                 )
             }
-            val user = userListViewModel.users.collectAsState().value.find { it.id == recipientId }
+            val userViewModel = remember { UserViewModel() }
+            
+            LaunchedEffect(recipientId) {
+                userViewModel.loadUserProfile(recipientId)
+            }
+            
+            val recipientProfile by userViewModel.userProfile.collectAsState()
+            
             ChatScreen(
                 viewModel = chatViewModel,
                 recipientId = recipientId,
                 userId = TokenDecoder.getUserIdFromToken(token) ?: "",
-                recipientName = user?.username ?: "Usuario",
+                recipientName = recipientProfile?.username ?: "Loading...",
                 navController = navController
             )
         }
+
+
+
     }
 }

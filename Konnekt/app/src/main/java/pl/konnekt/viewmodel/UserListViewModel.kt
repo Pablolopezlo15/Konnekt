@@ -19,26 +19,33 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import pl.konnekt.models.createPabloUser
 import pl.konnekt.network.KonnektApi
+import pl.konnekt.repository.UserRepository
 
-class UserListViewModel : ViewModel() {
+class UserListViewModel(
+    private val repository: UserRepository = UserRepository()
+) : ViewModel() {
     private val _users = MutableStateFlow<List<User>>(emptyList())
-    val users = _users.asStateFlow()
+    val users: StateFlow<List<User>> = _users
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading = _isLoading.asStateFlow()
+    val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _error = MutableStateFlow<String?>(null)
-    val error = _error.asStateFlow()
+    val error: StateFlow<String?> = _error
 
-    fun loadUsers() {
+    init {
+        loadUsers()
+    }
+
+    private fun loadUsers() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
                 _error.value = null
-                val userList = KonnektApi.retrofitService.getAllUsers()
+                val userList = repository.getAllUsers()
                 _users.value = userList
             } catch (e: Exception) {
-                _error.value = "Error loading users: ${e.message}"
+                _error.value = e.message
             } finally {
                 _isLoading.value = false
             }

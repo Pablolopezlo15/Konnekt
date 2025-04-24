@@ -30,7 +30,7 @@ class ChatViewModel(
     private val recipientId: String
 ) : ViewModel() {
     private val repository = ChatRepository(
-        URI("wss://192.168.1.41:8000"),
+        URI("wss://192.168.70.67:8000"),
         currentUserId
     )
     private val gson = Gson().newBuilder()

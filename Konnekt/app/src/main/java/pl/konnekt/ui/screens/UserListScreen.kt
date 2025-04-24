@@ -56,7 +56,7 @@ fun UserListScreen(
                         UserItem(
                             user = user,
                             onClick = {
-                                navController.navigate(Screen.Chat.createRoute(user.id))  // Actualizado
+                                navController.navigate(Screen.Chat.createRoute(user.id))
                             }
                         )
                     }

@@ -4,7 +4,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-private const val BASE_URL = "https://192.168.1.41:8000"
+private const val BASE_URL = "https://192.168.70.67:8000"
 
 private val okHttpClient = UnsafeOkHttpClient.getUnsafeOkHttpClient().newBuilder()
     .addInterceptor { chain ->
