@@ -50,8 +50,9 @@ fun BottomBar(navController: NavController) {
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
             label = { Text("Profile") },
-            selected = currentRoute?.startsWith("profile") == true,
+            selected = currentRoute == Screen.Profile.route,
             onClick = {
+                // When navigating to own profile
                 currentUserId?.let { userId ->
                     navController.navigate(Screen.Profile.createRoute(userId)) {
                         launchSingleTop = true

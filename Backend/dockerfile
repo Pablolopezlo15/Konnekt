@@ -2,9 +2,20 @@ FROM python:3.11
 
 WORKDIR /app
 
+# Copiar el archivo de dependencias e instalarlas
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiar el resto del proyecto
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--ssl-keyfile", "./certs/key.pem", "--ssl-certfile", "./certs/cert.pem"]
+# Instalar OpenSSL para generar claves SSL
+RUN apt-get update && apt-get install -y openssl
+
+# Generar claves SSL si no existen
+RUN mkdir -p certs && \
+    openssl genrsa -out certs/key.pem 2048 && \
+    openssl req -new -x509 -key certs/key.pem -out certs/cert.pem -days 365 -subj "/CN=localhost"
+
+# Comando para ejecutar la aplicación
+CMD ["uvicorn", "main2:app", "--host", "0.0.0.0", "--port", "433", "--ssl-keyfile", "./certs/key.pem", "--ssl-certfile", "./certs/cert.pem"]
