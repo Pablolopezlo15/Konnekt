@@ -21,6 +21,8 @@ import pl.konnekt.ui.theme.KonnektTheme
 import pl.konnekt.utils.TokenDecoder
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.konnekt.viewmodel.UserViewModel
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun ProfileScreen(
@@ -32,7 +34,10 @@ fun ProfileScreen(
 ) {
     val isCurrentUser = currentUserId == user.id
     val context = LocalContext.current
-    val isFollowing = user.followers.contains(currentUserId)
+    val updatedUser by viewModel.userProfile.collectAsState()
+    val displayUser = updatedUser ?: user
+    val isFollowing = displayUser.followers.contains(currentUserId)
+    val isLoading by viewModel.isLoading.collectAsState()
 
     KonnektTheme {
         Column(
@@ -44,8 +49,8 @@ fun ProfileScreen(
         ) {
             Row {
                 AsyncImage(
-                    model = user.profileImageUrl,
-                    contentDescription = "Profile picture of ${user.username}",
+                    model = displayUser.profileImageUrl,
+                    contentDescription = "Profile picture of ${displayUser.username}",
                     modifier = Modifier
                         .size(90.dp)
                         .clip(CircleShape)
@@ -56,7 +61,7 @@ fun ProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 16.dp),
-                        text = user.username,
+                        text = displayUser.username,
                         style = MaterialTheme.typography.titleLarge,
                     )
                     Row(
@@ -66,8 +71,8 @@ fun ProfileScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         StatItem(label = "Posts", count = "0")
-                        StatItem(label = "Followers", count = user.followers.size.toString())
-                        StatItem(label = "Following", count = user.following.size.toString())
+                        StatItem(label = "Followers", count = displayUser.followers.size.toString())
+                        StatItem(label = "Following", count = displayUser.following.size.toString())
                     }
 
                     if (!isCurrentUser) {
@@ -79,15 +84,47 @@ fun ProfileScreen(
                         ) {
                             Button(
                                 onClick = { 
-                                    if (isFollowing) {
-                                        //viewModel.unfollowUser(user.id)
-                                    } else {
-                                        //viewModel.followUser(user.id)
+                                    currentUserId?.let { cuid ->
+                                        if (isFollowing) {
+                                            viewModel.unfollowUser(displayUser.id, cuid)
+                                        } else {
+                                            viewModel.followUser(displayUser.id, cuid)
+                                        }
                                     }
                                 },
-                                modifier = Modifier.weight(1f)
+                                enabled = !isLoading,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isFollowing) 
+                                        MaterialTheme.colorScheme.error 
+                                    else 
+                                        Color.Transparent,
+                                    contentColor = if (isFollowing) 
+                                        MaterialTheme.colorScheme.onError 
+                                    else 
+                                        MaterialTheme.colorScheme.primary
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = if (isFollowing) 
+                                        MaterialTheme.colorScheme.error 
+                                    else 
+                                        MaterialTheme.colorScheme.primary
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
                             ) {
-                                Text(if (isFollowing) "Unfollow" else "Follow")
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = if (isFollowing) 
+                                            MaterialTheme.colorScheme.onError 
+                                        else 
+                                            MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Text(if (isFollowing) "Unfollow" else "Follow")
+                                }
                             }
 
                             Button(
