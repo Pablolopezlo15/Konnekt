@@ -4,10 +4,9 @@ services:
   web:
     build: .
     ports:
-      - "0.0.0.0:443:8000"
-    environment:
-      - MONGO_URI=mongodb://root:root@mongodb:27017
-      - SECRET_KEY=ajkhflkjalkvjhaiuajkvhp40t76208r7yjnflkwufoi7
+      - "443:443"
+    env_file:
+      - .env
     volumes:
       - ./certs:/app/certs
     networks:
@@ -19,9 +18,8 @@ services:
     image: mongo:latest
     ports:
       - "27017:27017"
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=root
-      - MONGO_INITDB_ROOT_PASSWORD=root
+    env_file:
+      - .env
     volumes:
       - mongodb_data:/data/db
     networks:
