@@ -4,7 +4,7 @@ services:
   web:
     build: .
     ports:
-      - "0.0.0.0:8000:8000"
+      - "0.0.0.0:443:8000"
     environment:
       - MONGO_URI=mongodb://root:root@mongodb:27017
       - SECRET_KEY=ajkhflkjalkvjhaiuajkvhp40t76208r7yjnflkwufoi7
