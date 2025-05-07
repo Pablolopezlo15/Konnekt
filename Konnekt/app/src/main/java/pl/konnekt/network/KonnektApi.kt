@@ -3,8 +3,9 @@ package pl.konnekt.network
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import pl.konnekt.config.AppConfig
 
-private const val BASE_URL = "https://54.145.77.55:8000"
+private val BASE_URL = AppConfig.BASE_URL
 
 private val okHttpClient = UnsafeOkHttpClient.getUnsafeOkHttpClient().newBuilder()
     .addInterceptor { chain ->

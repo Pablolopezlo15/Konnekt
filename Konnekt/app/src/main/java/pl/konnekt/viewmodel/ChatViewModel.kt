@@ -22,6 +22,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.delay
 import pl.konnekt.network.KonnektApi
+import pl.konnekt.config.AppConfig
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -30,7 +31,7 @@ class ChatViewModel(
     private val recipientId: String
 ) : ViewModel() {
     private val repository = ChatRepository(
-        URI("wss://54.145.77.55.:8000"),
+        URI(AppConfig.WEBSOCKET_URI),
         currentUserId
     )
     private val gson = Gson().newBuilder()
