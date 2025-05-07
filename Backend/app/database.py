@@ -12,3 +12,4 @@ db = client.chat_db
 users_collection = db.users
 messages_collection = db.messages
 posts_collection = db.posts
+friends_requests_collection = db.friends
