@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  web:
+  api:
     build: .
     ports:
       - "443:443"
@@ -10,7 +10,7 @@ services:
     volumes:
       - ./certs:/app/certs
     networks:
-      - app-network
+      - konnekt-network
     depends_on:
       - mongodb
 
@@ -18,15 +18,16 @@ services:
     image: mongo:latest
     ports:
       - "27017:27017"
-    env_file:
-      - .env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     volumes:
       - mongodb_data:/data/db
     networks:
-      - app-network
+      - konnekt-network
 
 networks:
-  app-network:
+  konnekt-network:
     driver: bridge
 
 volumes:

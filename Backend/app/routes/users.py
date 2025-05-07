@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List
 from ..models.user import UserCreate, UserResponse, UserLogin, FriendRequest
 from ..utils.auth import pwd_context, create_access_token
-from app.database import friend_requests_collection, users_collection
+from ..database import friend_requests_collection, users_collection
 from datetime import datetime
 from bson import ObjectId
 
