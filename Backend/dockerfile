@@ -18,4 +18,4 @@ RUN mkdir -p certs && \
     openssl req -new -x509 -key certs/key.pem -out certs/cert.pem -days 365 -subj "/CN=localhost"
 
 # Comando para ejecutar la aplicación
-CMD ["uvicorn", "main2:app", "--host", "0.0.0.0", "--port", "8000", "--ssl-keyfile", "./certs/key.pem", "--ssl-certfile", "./certs/cert.pem"]
+CMD ["uvicorn", "main2:app", "--host", "0.0.0.0", "--port", "433", "--ssl-keyfile", "./certs/key.pem", "--ssl-certfile", "./certs/cert.pem"]
