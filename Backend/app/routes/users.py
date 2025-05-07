@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List
-from ..models.user import UserCreate, UserResponse, UserLogin
+from ..models.user import UserCreate, UserResponse, UserLogin, FriendRequest
 from ..utils.auth import pwd_context, create_access_token
-from ..database import users_collection
+from ..database import users_collection, friend_requests_collection
+from datetime import datetime
+from bson import ObjectId
 
 router = APIRouter()
 
@@ -129,48 +131,7 @@ async def get_user_profile(user_id: str):
     except Exception as e:
         print(f"Error getting user profile: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-    
 
-@router.post("/users/{user_id}/unfollow", response_model=UserResponse)
-async def unfollow_user(user_id: str, current_user_id: str):
-    try:
-        # Verificar que el usuario a dejar de seguir existe
-        user_to_unfollow = await users_collection.find_one({"_id": ObjectId(user_id)})
-        if not user_to_unfollow:
-            raise HTTPException(status_code=404, detail="User to unfollow not found")
-
-        # Verificar que el usuario actual existe
-        current_user = await users_collection.find_one({"_id": ObjectId(current_user_id)})
-        if not current_user:
-            raise HTTPException(status_code=404, detail="Current user not found")
-
-        # Actualizar la lista de seguidores y seguidos
-        if current_user_id in user_to_unfollow.get("followers", []):
-            await users_collection.update_one(
-                {"_id": ObjectId(user_id)},
-                {"$pull": {"followers": current_user_id}}
-            )
-        if user_id in current_user.get("following", []):
-            await users_collection.update_one(
-                {"_id": ObjectId(current_user_id)},
-                {"$pull": {"following": user_id}}
-            )
-
-        # Retornar el perfil actualizado del usuario dejado de seguir
-        updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
-        return UserResponse(
-            id=str(updated_user["_id"]),
-            username=updated_user["username"],
-            email=updated_user["email"],
-            profile_image_url=updated_user.get("profile_image_url"),
-            phone=updated_user.get("phone"),
-            birth_date=updated_user.get("birth_date"),
-            followers=updated_user.get("followers", []),
-            following=updated_user.get("following", [])
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
 @router.post("/users/{user_id}/follow", response_model=UserResponse)
 async def follow_user(user_id: str, current_user_id: str):
     try:
@@ -188,7 +149,40 @@ async def follow_user(user_id: str, current_user_id: str):
         if user_id == current_user_id:
             raise HTTPException(status_code=400, detail="You cannot follow yourself")
 
-        # Actualizar la lista de seguidores y seguidos
+        # Verificar si la cuenta es privada
+        if user_to_follow.get("private_account", False):
+            # Verificar si ya existe una solicitud pendiente
+            existing_request = await friend_requests_collection.find_one({
+                "sender_id": current_user_id,
+                "receiver_id": user_id,
+                "status": "pending"
+            })
+            
+            if existing_request:
+                raise HTTPException(status_code=400, detail="Follow request already sent")
+            
+            # Crear nueva solicitud de seguimiento
+            request_doc = {
+                "sender_id": current_user_id,
+                "receiver_id": user_id,
+                "status": "pending",
+                "created_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            }
+            await friend_requests_collection.insert_one(request_doc)
+            
+            return UserResponse(
+                id=str(user_to_follow["_id"]),
+                username=user_to_follow["username"],
+                email=user_to_follow["email"],
+                profile_image_url=user_to_follow.get("profile_image_url"),
+                phone=user_to_follow.get("phone"),
+                birth_date=user_to_follow.get("birth_date"),
+                followers=user_to_follow.get("followers", []),
+                following=user_to_follow.get("following", []),
+                private_account=user_to_follow.get("private_account", False)
+            )
+        
+        # Si la cuenta no es privada, seguir directamente
         if current_user_id not in user_to_follow.get("followers", []):
             await users_collection.update_one(
                 {"_id": ObjectId(user_id)},
@@ -200,7 +194,7 @@ async def follow_user(user_id: str, current_user_id: str):
                 {"$push": {"following": user_id}}
             )
 
-        # Retornar el perfil actualizado del usuario seguido
+        # Retornar el perfil actualizado
         updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
         return UserResponse(
             id=str(updated_user["_id"]),
@@ -210,7 +204,56 @@ async def follow_user(user_id: str, current_user_id: str):
             phone=updated_user.get("phone"),
             birth_date=updated_user.get("birth_date"),
             followers=updated_user.get("followers", []),
-            following=updated_user.get("following", [])
+            following=updated_user.get("following", []),
+            private_account=updated_user.get("private_account", False)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/users/{user_id}/unfollow", response_model=UserResponse)
+async def unfollow_user(user_id: str, current_user_id: str):
+    try:
+        # Verificar que el usuario a dejar de seguir existe
+        user_to_unfollow = await users_collection.find_one({"_id": ObjectId(user_id)})
+        if not user_to_unfollow:
+            raise HTTPException(status_code=404, detail="User to unfollow not found")
+
+        # Verificar que el usuario actual existe
+        current_user = await users_collection.find_one({"_id": ObjectId(current_user_id)})
+        if not current_user:
+            raise HTTPException(status_code=404, detail="Current user not found")
+
+        # Cancelar solicitud pendiente si existe
+        await friend_requests_collection.delete_one({
+            "sender_id": current_user_id,
+            "receiver_id": user_id,
+            "status": "pending"
+        })
+
+        # Actualizar la lista de seguidores y seguidos
+        if current_user_id in user_to_unfollow.get("followers", []):
+            await users_collection.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$pull": {"followers": current_user_id}}
+            )
+        if user_id in current_user.get("following", []):
+            await users_collection.update_one(
+                {"_id": ObjectId(current_user_id)},
+                {"$pull": {"following": user_id}}
+            )
+
+        # Retornar el perfil actualizado
+        updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        return UserResponse(
+            id=str(updated_user["_id"]),
+            username=updated_user["username"],
+            email=updated_user["email"],
+            profile_image_url=updated_user.get("profile_image_url"),
+            phone=updated_user.get("phone"),
+            birth_date=updated_user.get("birth_date"),
+            followers=updated_user.get("followers", []),
+            following=updated_user.get("following", []),
+            private_account=updated_user.get("private_account", False)
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
