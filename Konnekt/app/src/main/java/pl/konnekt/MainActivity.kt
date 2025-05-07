@@ -159,8 +159,11 @@ fun NavigationGraph(
                 onRegisterSuccess = { /* ... */ }
             )
         }
-        composable(Screen.Profile.route) {
-            val userId = TokenDecoder.getUserIdFromToken(token)
+        composable(
+            route = Screen.Profile.route + "/{userId}",
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId")
             val userViewModel = remember { UserViewModel() }
 
             LaunchedEffect(userId) {
@@ -182,12 +185,8 @@ fun NavigationGraph(
                     followers = emptyList(),
                     following = emptyList()
                 ),
-                onLogout = {
-                    onLogout()
-                    navController.navigate(Screen.Auth.route) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                }
+                onLogout = onLogout,
+                currentUserId = TokenDecoder.getUserIdFromToken(token)
             )
         }
         composable(Screen.UserList.route) {
