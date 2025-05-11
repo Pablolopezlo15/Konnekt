@@ -27,12 +27,16 @@ object ImageUploader {
         }
     }
 
-    private fun createTempFileFromUri(context: Context, uri: Uri): File {
-        val stream = context.contentResolver.openInputStream(uri)
-        val file = File.createTempFile("upload", ".jpg", context.cacheDir)
-        FileOutputStream(file).use { output ->
-            stream?.copyTo(output)
+    fun createTempFileFromUri(context: Context, uri: Uri): File {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)
+        
+        FileOutputStream(tempFile).use { outputStream ->
+            inputStream?.use { input ->
+                input.copyTo(outputStream)
+            }
         }
-        return file
+        
+        return tempFile
     }
 }

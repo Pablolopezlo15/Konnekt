@@ -12,4 +12,5 @@ sealed class Screen(val route: String) {
         fun createRoute(userId: String) = "profile/$userId"
     }
     object UploadImage : Screen("uploadImage")
+    object CreatePost : Screen("create_post")
 }

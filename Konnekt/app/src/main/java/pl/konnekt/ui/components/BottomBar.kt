@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -60,6 +61,13 @@ fun BottomBar(navController: NavController) {
                     }
                 }
             }
+        )
+
+        NavigationBarItem(
+            icon = { Icon(Icons.Filled.AddCircle, contentDescription = "Create Post") },
+            label = { Text("Create") },
+            selected = currentRoute == Screen.CreatePost.route,
+            onClick = { navController.navigate(Screen.CreatePost.route) }
         )
     }
 }

@@ -14,6 +14,7 @@ import androidx.navigation.navArgument
 import pl.konnekt.AuthScreen
 import pl.konnekt.models.User
 import pl.konnekt.ui.components.*
+import pl.konnekt.ui.screens.CreatePostScreen
 import pl.konnekt.utils.TokenDecoder
 import pl.konnekt.viewmodel.ChatViewModel
 import pl.konnekt.viewmodel.UserListViewModel
@@ -134,6 +135,15 @@ fun AppNavigation(
             )
         }
 
+        composable(Screen.CreatePost.route) {
+            CreatePostScreen(
+                onPostCreated = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                    }
+                }
+            )
+        }
 
 
     }

@@ -7,13 +7,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import pl.konnekt.models.LoginResponse
+import pl.konnekt.models.RegisterResponse
 import pl.konnekt.models.UserCreate
 import pl.konnekt.models.UserResponse
 import pl.konnekt.network.KonnektApi
 
 class AuthViewModel : ViewModel() {
     val loginState = MutableStateFlow<LoginResponse?>(null)
-    val registerState = MutableStateFlow<UserResponse?>(null)
+    val registerState = MutableStateFlow<RegisterResponse?>(null)
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -52,7 +53,7 @@ class AuthViewModel : ViewModel() {
         email: String,
         phone: String? = null,
         birthDate: String? = null,
-        onSuccess: (UserResponse) -> Unit
+        onSuccess: (RegisterResponse) -> Unit
     ) {
         viewModelScope.launch {
             try {

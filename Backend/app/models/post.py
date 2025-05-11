@@ -1,18 +1,27 @@
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import Optional
+from datetime import datetime
 
 class PostCreate(BaseModel):
-    content: str
-    image_url: Optional[str] = None
-    location: Optional[str] = None
+    caption: str
 
 class PostResponse(BaseModel):
     id: str
     author_id: str
     author_username: str
-    content: str
-    image_url: Optional[str] = None
-    location: Optional[str] = None
-    likes: List[str] = []
-    comments: List[Dict] = []
-    created_at: str
+    image_url: str
+    caption: str
+    timestamp: str
+    likes_count: int
+    comments_count: int
+
+class CommentCreate(BaseModel):
+    comment: str
+
+class CommentResponse(BaseModel):
+    id: str
+    post_id: str
+    user_id: str
+    username: str
+    comment: str
+    timestamp: str

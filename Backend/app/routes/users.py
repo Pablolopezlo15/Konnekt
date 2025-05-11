@@ -27,8 +27,10 @@ async def register(user: UserCreate):
     }
     
     result = await users_collection.insert_one(user_doc)
-    response_doc = {
-        "id": str(result.inserted_id),
+    
+    # Create token data
+    token_data = {
+        "user_id": str(result.inserted_id),
         "username": user_doc["username"],
         "email": user_doc["email"],
         "phone": user_doc["phone"],
@@ -37,8 +39,37 @@ async def register(user: UserCreate):
         "followers": user_doc["followers"],
         "following": user_doc["following"]
     }
+    
+    # Create non-expiring token
+    access_token = create_access_token(token_data, no_expiry=True)
+    
+    response_doc = token_data.copy()
+    response_doc["id"] = token_data["user_id"]
+    response_doc["access_token"] = access_token
+    response_doc["token_type"] = "bearer"
 
     return UserResponse(**response_doc)
+
+@router.post("/login")
+async def login(user: UserLogin):
+    db_user = await users_collection.find_one({"username": user.username})
+    if not db_user or not pwd_context.verify(user.password, db_user["password"]):
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    
+    token_data = {
+        "user_id": str(db_user["_id"]),
+        "profile_image_url": db_user.get("profile_image_url"),
+        "phone": db_user.get("phone"),
+        "birth_date": db_user.get("birth_date"),
+        "followers": db_user.get("followers", []),
+        "following": db_user.get("following", []),
+        "email": db_user["email"],
+        "username": db_user["username"]
+    }
+    
+    # Create non-expiring token
+    access_token = create_access_token(token_data, no_expiry=True)
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @router.get("/users", response_model=List[UserResponse])
 async def get_users():

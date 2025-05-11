@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import pl.konnekt.models.RegisterResponse
 import pl.konnekt.models.User
 import pl.konnekt.models.createPabloUser
 import pl.konnekt.navigation.AppNavigation
@@ -99,9 +100,11 @@ class MainActivity : ComponentActivity() {
                                 popUpTo(0) { inclusive = true }
                             }
                         },
-                        onRegisterSuccess = {
+                        onRegisterSuccess = { accessToken ->
+                            token = accessToken
+                            sharedPreferences.edit().putString("token", accessToken).apply()
                             isLoggedIn = true
-                            navController.navigate(Screen.Home.route) {  // Actualizado
+                            navController.navigate(Screen.Home.route) {
                                 popUpTo(0) { inclusive = true }
                             }
                         }
@@ -222,7 +225,7 @@ fun NavigationGraph(
 @Composable
 fun AuthScreen(
     onLoginSuccess: (String) -> Unit,
-    onRegisterSuccess: () -> Unit
+    onRegisterSuccess: (String) -> Unit
 ) {
     val authViewModel = remember { AuthViewModel() }
     val isLoading by authViewModel.isLoading.collectAsState()
@@ -232,22 +235,19 @@ fun AuthScreen(
     AuthComponent(
         viewModel = authViewModel,
         onLoginSuccess = { loginResponse ->
-            Log.d("AuthScreen", "Login response received: $loginResponse")
             loginResponse.access_token?.let { token ->
-                Log.d("AuthScreen", "Login successful, token: ${token.take(10)}...")
                 onLoginSuccess(token)
                 navController.navigate("home") {
                     popUpTo(0) { inclusive = true }
                 }
-            } ?: run {
-                Log.e("AuthScreen", "Login response token is null")
             }
         },
-        onRegisterSuccess = { userResponse ->
-            Log.d("AuthScreen", "Registration successful")
-            onRegisterSuccess()
-            navController.navigate("home") {
-                popUpTo(0) { inclusive = true }
+        onRegisterSuccess = { registerResponse ->
+            registerResponse.access_token.let { token ->
+                onRegisterSuccess(token)
+                navController.navigate("home") {
+                    popUpTo(0) { inclusive = true }
+                }
             }
         },
         isLoading = isLoading,

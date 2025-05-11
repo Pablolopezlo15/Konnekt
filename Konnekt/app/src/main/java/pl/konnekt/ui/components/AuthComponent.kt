@@ -23,6 +23,7 @@ import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
 import pl.konnekt.R
 import pl.konnekt.models.LoginResponse
+import pl.konnekt.models.RegisterResponse
 import pl.konnekt.models.UserResponse
 import pl.konnekt.viewmodels.AuthViewModel
 
@@ -31,7 +32,7 @@ import pl.konnekt.viewmodels.AuthViewModel
 fun AuthComponent(
     viewModel: AuthViewModel,
     onLoginSuccess: (LoginResponse) -> Unit,
-    onRegisterSuccess: (UserResponse) -> Unit,
+    onRegisterSuccess: (RegisterResponse) -> Unit,
     isLoading: Boolean,
     error: String?
 ) {

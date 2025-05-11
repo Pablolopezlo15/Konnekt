@@ -28,13 +28,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.launch
 import pl.konnekt.navigation.Screen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.konnekt.viewmodel.PostViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun MainScreen(modifier: Modifier = Modifier) {
     val navController = LocalNavController.current
     val swipeableState = rememberSwipeableState(initialValue = 0)
-    val anchors = mapOf(0f to 0, -300f to 1) // Reducida la distancia necesaria
+    val anchors = mapOf(0f to 0, -300f to 1)
+    val postViewModel: PostViewModel = viewModel()
+    val posts by postViewModel.posts.collectAsState()
+    val context = LocalContext.current
+    
+    LaunchedEffect(Unit) {
+        postViewModel.getAllPosts()
+    }
     
     Box(
         modifier = modifier
@@ -42,9 +54,9 @@ fun MainScreen(modifier: Modifier = Modifier) {
             .swipeable(
                 state = swipeableState,
                 anchors = anchors,
-                thresholds = { _, _ -> FractionalThreshold(0.15f) }, // Reducido el umbral
+                thresholds = { _, _ -> FractionalThreshold(0.15f)},
                 orientation = Orientation.Horizontal,
-                resistance = ResistanceConfig(0.3f) // Añadida menor resistencia
+                resistance = ResistanceConfig(0.3f)
             )
     ) {
         LaunchedEffect(swipeableState.currentValue) {
@@ -54,28 +66,24 @@ fun MainScreen(modifier: Modifier = Modifier) {
             }
         }
 
-        // Contenido actual de MainScreen
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            var user: User = createPabloUser()
-            val posts = remember {
-                listOf(
-                    Post("id","https://picsum.photos/400/300", "Un día increíble en la montaña 🏔️",user, "2025-03-30T09:00:00Z"),
-                    Post("id","https://picsum.photos/400/301",  "Disfrutando el atardecer 🌅",user,"2025-03-30T09:00:00Z"),
-                    Post("id","https://picsum.photos/400/302",  "Café y código ☕💻",user,"2025-03-30T09:00:00Z")
-                )
-            }
-
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(bottom = 8.dp)
             ) {
                 items(posts) { post ->
-                    PostItem(post)
+                    PostItem(
+                        post = post,
+                        onLikeClick = { postId -> postViewModel.likePost(postId, context) },
+                        onCommentClick = { postId -> 
+                            navController.navigate("post/$postId/comments")
+                        }
+                    )
                 }
             }
         }
