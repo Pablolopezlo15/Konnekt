@@ -93,11 +93,15 @@ class PostViewModel : ViewModel() {
         }
     }
 
-    fun getAllPosts() {
+    fun getAllPosts(context: Context) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val allPosts = KonnektApi.retrofitService.getAllPosts()
+                val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    .getString("token", "") ?: ""
+                val authHeader = "Bearer $token"
+
+                val allPosts = KonnektApi.retrofitService.getAllPosts(authHeader)
                 _posts.value = allPosts
             } catch (e: Exception) {
                 _error.value = e.message

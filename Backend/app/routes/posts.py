@@ -85,7 +85,8 @@ async def create_post(
             "caption": caption,
             "timestamp": datetime.utcnow().isoformat(),
             "likes_count": 0,
-            "comments_count": 0
+            "comments_count": 0,
+            "is_liked": False
         }
         
         result = await posts_collection.insert_one(post_doc)
@@ -99,19 +100,108 @@ async def create_post(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/posts", response_model=List[PostResponse])
-async def get_all_posts():
+async def get_all_posts(authorization: str | None = Header(default=None, alias="Authorization")):
     try:
+        if not authorization:
+            raise HTTPException(
+                status_code=401, 
+                detail="Authorization header is required. Use format: Bearer <token>"
+            )
+        
+        try:
+            if authorization.startswith("Bearer "):
+                token = authorization.split(" ")[1]
+            else:
+                token = authorization
+                
+            user_data = decode_token(token)
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            raise HTTPException(status_code=401, detail="Invalid authentication token")
+
+        user_id = user_data["user_id"]
         posts = await posts_collection.find().sort("timestamp", -1).to_list(100)
-        return [PostResponse(id=str(post["_id"]), **{k:v for k,v in post.items() if k!= "_id"}) for post in posts]
+        
+        response_posts = []
+        for post in posts:
+            try:
+                is_liked = await likes_collection.find_one({
+                    "user_id": user_id,
+                    "post_id": str(post["_id"])
+                }) is not None
+                
+                post_dict = {
+                    "id": str(post["_id"]),
+                    "author_id": post.get("author_id", ""),
+                    "author_username": post.get("author_username", ""),
+                    "image_url": post.get("image_url", ""),
+                    "caption": post.get("caption", ""),
+                    "timestamp": post.get("timestamp", ""),
+                    "likes_count": post.get("likes_count", 0),
+                    "comments_count": post.get("comments_count", 0),
+                    "is_liked": is_liked
+                }
+                response_posts.append(post_dict)
+            except Exception as post_error:
+                print(f"Error processing post {post.get('_id', 'unknown')}: {str(post_error)}")
+                continue
+            
+        return response_posts
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error in get_all_posts: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
         
 
 @router.get("/posts/{user_id}", response_model=List[PostResponse])
-async def get_user_posts(user_id: str):
+async def get_user_posts(
+    user_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization")
+):
     try:
+        if not authorization:
+            raise HTTPException(
+                status_code=401, 
+                detail="Authorization header is required. Use format: Bearer <token>"
+            )
+        
+        try:
+            if authorization.startswith("Bearer "):
+                token = authorization.split(" ")[1]
+            else:
+                token = authorization
+                
+            user_data = decode_token(token)
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            raise HTTPException(status_code=401, detail="Invalid authentication token")
+
+        current_user_id = user_data["user_id"]
         posts = await posts_collection.find({"author_id": user_id}).sort("timestamp", -1).to_list(100)
-        return [PostResponse(id=str(post["_id"]), **{k:v for k,v in post.items() if k != "_id"}) for post in posts]
+        
+        response_posts = []
+        for post in posts:
+            # Check if current user liked this post
+            is_liked = await likes_collection.find_one({
+                "user_id": current_user_id,
+                "post_id": str(post["_id"])
+            }) is not None
+            
+            post_dict = {
+                "id": str(post["_id"]),
+                "author_id": post["author_id"],
+                "author_username": post["author_username"],
+                "image_url": post["image_url"],
+                "caption": post["caption"],
+                "timestamp": post["timestamp"],
+                "likes_count": post["likes_count"],
+                "comments_count": post["comments_count"],
+                "is_liked": is_liked
+            }
+            response_posts.append(post_dict)
+            
+        return response_posts
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

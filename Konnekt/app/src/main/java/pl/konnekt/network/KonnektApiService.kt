@@ -82,5 +82,7 @@ interface KonnektApiService {
     suspend fun getPostComments(@Path("postId") postId: String): List<Comment>
 
     @GET("posts")
-    suspend fun getAllPosts(): List<Post>
+    suspend fun getAllPosts(
+        @Header("Authorization") authorization: String
+    ): List<Post>
 }

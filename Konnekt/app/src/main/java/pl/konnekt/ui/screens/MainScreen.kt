@@ -45,7 +45,7 @@ fun MainScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     
     LaunchedEffect(Unit) {
-        postViewModel.getAllPosts()
+        postViewModel.getAllPosts(context)
     }
     
     Box(

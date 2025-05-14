@@ -14,6 +14,7 @@ class PostResponse(BaseModel):
     timestamp: str
     likes_count: int
     comments_count: int
+    is_liked: bool
 
 class CommentCreate(BaseModel):
     comment: str

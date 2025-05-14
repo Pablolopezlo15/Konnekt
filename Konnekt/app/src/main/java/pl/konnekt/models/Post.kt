@@ -1,6 +1,7 @@
 package pl.konnekt.models
 
 import android.util.Log
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -34,9 +35,9 @@ data class Post(
     @SerializedName("image_url") val imageUrl: String,
     @SerializedName("caption") val caption: String,
     @SerializedName("timestamp") val timestamp: String,
-    @SerializedName("likes_count") val likesCount: Int,
+    @SerializedName("likes_count") var likesCount: Int,
     @SerializedName("comments_count") val commentsCount: Int,
-    @SerializedName("is_liked") val isLiked: Boolean = false
+    @SerializedName("is_liked") var isLiked: Boolean = false
 ): Serializable
 
 @Composable
@@ -48,15 +49,25 @@ fun PostItem(
     val context = LocalContext.current
     val imageLoader = remember { CoilConfig.getImageLoader(context) }
     
+    // Track post state with both id and isLiked to ensure updates
+    var currentPost by remember(post.id, post.isLiked) { mutableStateOf(post) }
+    
+    // Update local state when post changes
+    LaunchedEffect(post.id, post.isLiked, post.likesCount) {
+        if (currentPost.isLiked != post.isLiked || currentPost.likesCount != post.likesCount) {
+            currentPost = post
+        }
+    }
+
     // Format timestamp
-    val formattedDate = remember(post.timestamp) {
+    val formattedDate = remember(currentPost.timestamp) {
         try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
             val outputFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
-            val date = inputFormat.parse(post.timestamp)
+            val date = inputFormat.parse(currentPost.timestamp)
             outputFormat.format(date)
         } catch (e: Exception) {
-            post.timestamp
+            currentPost.timestamp
         }
     }
 
@@ -71,8 +82,8 @@ fun PostItem(
             modifier = Modifier.padding(8.dp)
         ) {
             AsyncImage(
-                model = "${AppConfig.BASE_URL}${post.imageUrl}",
-                contentDescription = "Profile picture of ${post.authorUsername}",
+                model = "${AppConfig.BASE_URL}${currentPost.imageUrl}",  // Changed from post to currentPost
+                contentDescription = "Profile picture of ${currentPost.authorUsername}",  // Changed from post to currentPost
                 imageLoader = imageLoader,
                 modifier = Modifier
                     .size(32.dp)
@@ -80,7 +91,7 @@ fun PostItem(
                     .border(1.dp, Color.Gray, CircleShape)
             )
             Text(
-                text = post.authorUsername,
+                text = currentPost.authorUsername,  // Changed from post to currentPost
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(start = 8.dp)
@@ -89,8 +100,8 @@ fun PostItem(
 
         // Post image
         AsyncImage(
-            model = "${AppConfig.BASE_URL}${post.imageUrl}",
-            contentDescription = "Post image by ${post.authorUsername}",
+            model = "${AppConfig.BASE_URL}${currentPost.imageUrl}",  // Changed from post to currentPost
+            contentDescription = "Post image by ${currentPost.authorUsername}",  // Changed from post to currentPost
             imageLoader = imageLoader,
             modifier = Modifier
                 .fillMaxWidth()
@@ -106,7 +117,7 @@ fun PostItem(
 
         // Caption
         Text(
-            text = post.caption,
+            text = currentPost.caption,  // Changed from post to currentPost
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             fontSize = 14.sp
         )
@@ -118,15 +129,25 @@ fun PostItem(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Update the like button
-            IconButton(onClick = { onLikeClick(post.id) }) {
+            IconButton(
+                onClick = { 
+                    Log.d("PostItem", "Like clicked - Before: isLiked=${currentPost.isLiked}")
+                    // Update local state immediately for better UX
+                    currentPost = currentPost.copy(
+                        isLiked = !currentPost.isLiked,
+                        likesCount = currentPost.likesCount + if (!currentPost.isLiked) 1 else -1
+                    )
+                    onLikeClick(currentPost.id)
+                }
+            ) {
                 Icon(
-                    imageVector = if (post.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Like",
-                    tint = if (post.isLiked) Color.Red else LocalContentColor.current
+                    imageVector = if (currentPost.isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = if (currentPost.isLiked) "Unlike" else "Like",
+                    tint = if (currentPost.isLiked) Color(0xFFE91E63) else Color.Gray,
+                    modifier = Modifier.animateContentSize()
                 )
             }
-            IconButton(onClick = { onCommentClick(post.id) }) {
+            IconButton(onClick = { onCommentClick(currentPost.id) }) {
                 Icon(
                     imageVector = Icons.Default.Email,
                     contentDescription = "Comment"
@@ -142,12 +163,12 @@ fun PostItem(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "${post.likesCount} likes",
+                text = "${currentPost.likesCount} likes",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp
             )
             Text(
-                text = "${post.commentsCount} comments",
+                text = "${currentPost.commentsCount} comments",
                 fontSize = 14.sp
             )
         }
