@@ -23,6 +23,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.konnekt.viewmodel.UserViewModel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.ContentScale
+import coil.request.ImageRequest
+import pl.konnekt.config.AppConfig
+import pl.konnekt.viewmodel.PostViewModel
 
 @Composable
 fun ProfileScreen(
@@ -30,7 +39,8 @@ fun ProfileScreen(
     user: User, 
     onLogout: () -> Unit = {},
     currentUserId: String? = null,
-    viewModel: UserViewModel = viewModel()
+    viewModel: UserViewModel = viewModel(),
+    viewModelPost: PostViewModel = viewModel()
 ) {
     val isCurrentUser = currentUserId == user.id
     val context = LocalContext.current
@@ -38,6 +48,13 @@ fun ProfileScreen(
     val displayUser = updatedUser ?: user
     val isFollowing = displayUser.followers.contains(currentUserId)
     val isLoading by viewModel.isLoading.collectAsState()
+
+    // Load posts when the screen is first displayed
+    LaunchedEffect(user.id) {
+        viewModelPost.getUserPosts(user.id, context)
+    }
+
+    val posts by viewModelPost.posts.collectAsState()
 
     KonnektTheme {
         Column(
@@ -70,18 +87,18 @@ fun ProfileScreen(
                             .padding(vertical = 16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        StatItem(label = "Posts", count = "0")
+                        StatItem(label = "Posts", count = posts.size.toString())
                         StatItem(label = "Followers", count = displayUser.followers.size.toString())
                         StatItem(label = "Following", count = displayUser.following.size.toString())
                     }
 
-                    if (!isCurrentUser) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (!isCurrentUser) {
                             Button(
                                 onClick = { 
                                     currentUserId?.let { cuid ->
@@ -111,7 +128,7 @@ fun ProfileScreen(
                                         MaterialTheme.colorScheme.primary
                                 ),
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .weight(1f)
                                     .padding(vertical = 8.dp)
                             ) {
                                 if (isLoading) {
@@ -123,7 +140,7 @@ fun ProfileScreen(
                                             MaterialTheme.colorScheme.primary
                                     )
                                 } else {
-                                    Text(if (isFollowing) "Unfollow" else "Follow")
+                                    Text(if (isFollowing) "Siguiendo" else "Seguir")
                                 }
                             }
 
@@ -133,35 +150,65 @@ fun ProfileScreen(
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Send Message")
+                                Text("Mensaje")
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                                        .edit()
+                                        .remove("token")
+                                        .apply()
+                                    onLogout()
+                                    navController.navigate("auth") {
+                                        popUpTo(0) { inclusive = true }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Text("Cerrar Sesión")
                             }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            if (isCurrentUser) {
-                Button(
-                    onClick = {
-                        context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                            .edit()
-                            .remove("token")
-                            .apply()
-                        onLogout()
-                        navController.navigate("auth") {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp)
-                ) {
-                    Text("Cerrar Sesión")
+            // Grid de posts con mejor visualización
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                contentPadding = PaddingValues(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(posts) { post ->
+                    Box(
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable {
+                                //navController.navigate(Screen.PostDetail.createRoute(post.id))
+                            }
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data("${AppConfig.BASE_URL}${post.imageUrl}")
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Post image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
         }

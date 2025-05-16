@@ -64,7 +64,16 @@ interface KonnektApiService {
     ): Post
 
     @GET("posts/{userId}")
-    suspend fun getUserPosts(@Path("userId") userId: String): List<Post>
+    suspend fun getUserPosts(
+        @Header("Authorization") authorization: String,
+        @Path("userId") userId: String
+    ): List<Post>
+
+    @DELETE("posts/{postId}")
+    suspend fun deletePost(
+        @Header("Authorization") authorization: String,
+        @Path("postId") postId: String
+    ): Unit
 
     @POST("posts/{postId}/like")
     suspend fun likePost(

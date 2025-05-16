@@ -79,7 +79,9 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 items(posts) { post ->
                     PostItem(
                         post = post,
-                        onLikeClick = { postId -> postViewModel.likePost(postId, context) },
+                        onLikeClick = { postId, isLiked, callback ->
+                            postViewModel.likePost(postId, context, isLiked, callback)
+                        },
                         onCommentClick = { postId -> 
                             navController.navigate("post/$postId/comments")
                         }

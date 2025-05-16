@@ -14,7 +14,6 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import pl.konnekt.models.Post
 import pl.konnekt.network.KonnektApi
-import java.io.File
 import pl.konnekt.utils.ImageUploader
 
 class PostViewModel : ViewModel() {
@@ -52,11 +51,15 @@ class PostViewModel : ViewModel() {
         }
     }
 
-    fun getUserPosts(userId: String) {
+    fun getUserPosts(userId: String, context: Context) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                val userPosts = KonnektApi.retrofitService.getUserPosts(userId)
+                val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    .getString("token", "") ?: ""
+                val authHeader = "Bearer $token"
+                
+                val userPosts = KonnektApi.retrofitService.getUserPosts(authHeader, userId)
                 _posts.value = userPosts
             } catch (e: Exception) {
                 _error.value = e.message
@@ -66,10 +69,9 @@ class PostViewModel : ViewModel() {
         }
     }
 
-    fun likePost(postId: String, context: Context) {
+    fun likePost(postId: String, context: Context, isLiked: Boolean, callback: (Boolean, Boolean, Int) -> Unit) {
         viewModelScope.launch {
             try {
-                // Get token and add Bearer prefix
                 val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                     .getString("token", "") ?: ""
                 val authHeader = "Bearer $token"
@@ -77,18 +79,26 @@ class PostViewModel : ViewModel() {
                 // Make API call with authorization header
                 val response = KonnektApi.retrofitService.likePost(authHeader, postId)
                 
+                // Determine new state based on API response
+                val newIsLiked = response["message"] == "Post liked"
+                val likesCountChange = if (newIsLiked) 1 else -1
+
                 // Update post in the list
                 _posts.value = _posts.value.map { post ->
                     if (post.id == postId) {
-                        post.copy(likesCount = if (response["message"] == "Post liked") 
-                            post.likesCount + 1 
-                        else 
-                            post.likesCount - 1
+                        post.copy(
+                            isLiked = newIsLiked,
+                            likesCount = post.likesCount + likesCountChange
                         )
                     } else post
                 }
+
+                // Notify caller of success
+                callback(true, newIsLiked, _posts.value.find { it.id == postId }?.likesCount ?: 0)
             } catch (e: Exception) {
                 _error.value = "Error liking post: ${e.message}"
+                // Notify caller of failure, revert to previous state
+                callback(false, isLiked, _posts.value.find { it.id == postId }?.likesCount ?: 0)
             }
         }
     }
@@ -109,5 +119,9 @@ class PostViewModel : ViewModel() {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun clearPosts() {
+        _posts.value = emptyList()
     }
 }
