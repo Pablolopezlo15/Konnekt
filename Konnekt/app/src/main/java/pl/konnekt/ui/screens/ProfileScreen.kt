@@ -129,7 +129,8 @@ fun ProfileScreen(
                                 ),
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(vertical = 8.dp)
+                                    .height(40.dp)  // Altura fija para ambos botones
+            
                             ) {
                                 if (isLoading) {
                                     CircularProgressIndicator(
@@ -148,7 +149,12 @@ fun ProfileScreen(
                                 onClick = { 
                                     navController.navigate(Screen.Chat.createRoute(user.id))
                                 },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp),  // Misma altura que el botón Seguir
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary
+                                )
                             ) {
                                 Text("Mensaje")
                             }
@@ -169,7 +175,7 @@ fun ProfileScreen(
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 8.dp)
+                                    
                             ) {
                                 Text("Cerrar Sesión")
                             }
