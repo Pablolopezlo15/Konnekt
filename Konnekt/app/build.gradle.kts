@@ -74,6 +74,9 @@ dependencies {
     //BROADCAST LOGOUT
     implementation ("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
+    //ICONOS
+    implementation ("androidx.compose.material:material-icons-extended:1.6.8")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

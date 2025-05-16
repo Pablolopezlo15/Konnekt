@@ -14,6 +14,7 @@ import androidx.navigation.navArgument
 import pl.konnekt.AuthScreen
 import pl.konnekt.models.User
 import pl.konnekt.ui.components.*
+import pl.konnekt.ui.screens.CommentsScreen
 import pl.konnekt.ui.screens.CreatePostScreen
 import pl.konnekt.utils.TokenDecoder
 import pl.konnekt.viewmodel.ChatViewModel
@@ -38,7 +39,7 @@ fun AppNavigation(
         composable(Screen.Home.route) {
             MainScreen(modifier = Modifier)
         }
-        
+
         composable(Screen.Auth.route) {
             val authViewModel = remember { AuthViewModel() }
             AuthScreen(
@@ -47,14 +48,14 @@ fun AppNavigation(
                         popUpTo(0) { inclusive = true }
                     }
                 },
-                onRegisterSuccess = { 
+                onRegisterSuccess = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             )
         }
-        
+
         composable(
             route = Screen.Profile.route,
             arguments = listOf(
@@ -63,7 +64,7 @@ fun AppNavigation(
         ) { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")
             val userViewModel = remember { UserViewModel() }
-            
+
             LaunchedEffect(userId) {
                 userId?.let { id ->
                     userViewModel.loadUserProfile(id)
@@ -71,7 +72,7 @@ fun AppNavigation(
             }
 
             val userProfile by userViewModel.userProfile.collectAsState()
-            
+
             ProfileScreen(
                 navController = navController,
                 user = userProfile ?: User(
@@ -101,7 +102,7 @@ fun AppNavigation(
             UserSearchScreen(
                 viewModel = searchViewModel,
                 onUserClick = { userId ->
-                    navController.navigate("profile/$userId")  // Changed to use string directly
+                    navController.navigate("profile/$userId")
                 }
             )
         }
@@ -119,13 +120,13 @@ fun AppNavigation(
                 )
             }
             val userViewModel = remember { UserViewModel() }
-            
+
             LaunchedEffect(recipientId) {
                 userViewModel.loadUserProfile(recipientId)
             }
-            
+
             val recipientProfile by userViewModel.userProfile.collectAsState()
-            
+
             ChatScreen(
                 viewModel = chatViewModel,
                 recipientId = recipientId,
@@ -145,6 +146,14 @@ fun AppNavigation(
             )
         }
 
-
+        composable(
+            route = "post/{postId}/comments",
+            arguments = listOf(navArgument("postId") { type = NavType.StringType }),
+            enterTransition = { slideInHorizontally(tween(300)) { it } },
+            exitTransition = { slideOutHorizontally(tween(300)) { it } }
+        ) { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId") ?: ""
+            CommentsScreen(postId = postId)
+        }
     }
 }

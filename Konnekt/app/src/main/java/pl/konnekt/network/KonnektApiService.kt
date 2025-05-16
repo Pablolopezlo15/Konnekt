@@ -2,7 +2,6 @@ package pl.konnekt.network
 
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
-import org.w3c.dom.Comment
 import pl.konnekt.models.*
 import retrofit2.http.*
 
@@ -83,12 +82,16 @@ interface KonnektApiService {
 
     @POST("posts/{postId}/comments")
     suspend fun addComment(
+        @Header("Authorization") authorization: String,
         @Path("postId") postId: String,
-        @Body comment: Map<String, String>
+        @Body comment: RequestBody
     ): Comment
 
     @GET("posts/{postId}/comments")
-    suspend fun getPostComments(@Path("postId") postId: String): List<Comment>
+    suspend fun getPostComments(
+        @Header("Authorization") authHeader: String,
+        @Path("postId") postId: String
+    ): List<pl.konnekt.models.Comment>
 
     @GET("posts")
     suspend fun getAllPosts(

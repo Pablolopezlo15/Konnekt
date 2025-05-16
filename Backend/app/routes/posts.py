@@ -277,7 +277,7 @@ async def like_post(
 @router.post("/posts/{post_id}/comments", response_model=CommentResponse)
 async def add_comment(
     post_id: str, 
-    comment: CommentCreate, 
+    comment: str = Form(...),
     authorization: str | None = Header(default=None, alias="Authorization")
 ):
     try:
@@ -306,7 +306,7 @@ async def add_comment(
             "post_id": post_id,
             "user_id": user_id,
             "username": username,
-            "comment": comment.comment,
+            "comment": comment,
             "timestamp": datetime.utcnow().isoformat()
         }
         
