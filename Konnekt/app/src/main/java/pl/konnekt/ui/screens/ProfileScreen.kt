@@ -1,6 +1,7 @@
 package pl.konnekt.ui.components
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -32,7 +33,12 @@ import androidx.compose.ui.layout.ContentScale
 import coil.request.ImageRequest
 import pl.konnekt.config.AppConfig
 import pl.konnekt.viewmodel.PostViewModel
-
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.ui.text.style.TextAlign
+import pl.konnekt.ui.components.EditProfileDialog
 @Composable
 fun ProfileScreen(
     navController: NavController, 
@@ -42,16 +48,22 @@ fun ProfileScreen(
     viewModel: UserViewModel = viewModel(),
     viewModelPost: PostViewModel = viewModel()
 ) {
+    val showEditDialog = remember { mutableStateOf(false) }
     val isCurrentUser = currentUserId == user.id
     val context = LocalContext.current
     val updatedUser by viewModel.userProfile.collectAsState()
     val displayUser = updatedUser ?: user
-    val isFollowing = displayUser.followers.contains(currentUserId)
     val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val isFollowing = displayUser.followers.contains(currentUserId)
+    val canViewPosts = isCurrentUser || isFollowing || !displayUser.private_account
 
-    // Load posts when the screen is first displayed
+    // Load user profile and posts
     LaunchedEffect(user.id) {
-        viewModelPost.getUserPosts(user.id, context)
+        if (currentUserId != null) {
+            viewModel.loadUserProfile(user.id, currentUserId)
+            viewModelPost.getUserPosts(user.id, context)
+        }
     }
 
     val posts by viewModelPost.posts.collectAsState()
@@ -64,159 +76,236 @@ fun ProfileScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row {
-                AsyncImage(
-                    model = displayUser.profileImageUrl,
-                    contentDescription = "Profile picture of ${displayUser.username}",
-                    modifier = Modifier
-                        .size(90.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+            // Error message display
+            error?.let { errorMessage ->
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-                Column {
-                    Text(
+            }
+
+            if (isLoading && updatedUser == null) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            } else {
+                Row {
+                    AsyncImage(
+                        model = "${AppConfig.BASE_URL}${displayUser.profileImageUrl}",
+                        contentDescription = "Profile picture of ${displayUser.username}",
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp),
-                        text = displayUser.username,
-                        style = MaterialTheme.typography.titleLarge,
+                            .size(90.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        StatItem(label = "Posts", count = posts.size.toString())
-                        StatItem(label = "Followers", count = displayUser.followers.size.toString())
-                        StatItem(label = "Following", count = displayUser.following.size.toString())
-                    }
+                    Column {
+                        Text(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp),
+                            text = displayUser.username,
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            StatItem(label = "Posts", count = posts.size.toString())
+                            StatItem(label = "Seguidores", count = displayUser.followers.size.toString())
+                            StatItem(label = "Seguidos", count = displayUser.following.size.toString())
+                        }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (!isCurrentUser) {
-                            Button(
-                                onClick = { 
-                                    currentUserId?.let { cuid ->
-                                        if (isFollowing) {
-                                            viewModel.unfollowUser(displayUser.id, cuid)
-                                        } else {
-                                            viewModel.followUser(displayUser.id, cuid)
-                                        }
-                                    }
-                                },
-                                enabled = !isLoading,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isFollowing) 
-                                        MaterialTheme.colorScheme.error 
-                                    else 
-                                        Color.Transparent,
-                                    contentColor = if (isFollowing) 
-                                        MaterialTheme.colorScheme.onError 
-                                    else 
-                                        MaterialTheme.colorScheme.primary
-                                ),
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = if (isFollowing) 
-                                        MaterialTheme.colorScheme.error 
-                                    else 
-                                        MaterialTheme.colorScheme.primary
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp)  // Altura fija para ambos botones
-            
-                            ) {
-                                if (isLoading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        color = if (isFollowing) 
-                                            MaterialTheme.colorScheme.onError 
-                                        else 
-                                            MaterialTheme.colorScheme.primary
-                                    )
-                                } else {
-                                    Text(if (isFollowing) "Siguiendo" else "Seguir")
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (!isCurrentUser) {
+                                val followRequestStatus by viewModel.followRequestStatus.collectAsState()
+                                val buttonText = when {
+                                    isFollowing -> "Siguiendo"
+                                    followRequestStatus == "pending" -> "Solicitado"
+                                    displayUser.private_account -> "Solicitar"
+                                    else -> "Seguir"
                                 }
-                            }
 
-                            Button(
-                                onClick = { 
-                                    navController.navigate(Screen.Chat.createRoute(user.id))
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp),  // Misma altura que el botón Seguir
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                Text("Mensaje")
-                            }
-                        } else {
-                            Button(
-                                onClick = {
-                                    context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                                        .edit()
-                                        .remove("token")
-                                        .apply()
-                                    onLogout()
-                                    navController.navigate("auth") {
-                                        popUpTo(0) { inclusive = true }
+                                val buttonEnabled = !isLoading && followRequestStatus != "pending"
+
+                                Button(
+                                    onClick = { 
+                                        currentUserId?.let { cuid ->
+                                            if (isFollowing) {
+                                                viewModel.unfollowUser(displayUser.id, cuid)
+                                            } else {
+                                                viewModel.followUser(displayUser.id, cuid)
+                                            }
+                                        }
+                                    },
+                                    enabled = buttonEnabled,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = when {
+                                            isFollowing -> MaterialTheme.colorScheme.error
+                                            followRequestStatus == "pending" -> MaterialTheme.colorScheme.surfaceVariant
+                                            else -> MaterialTheme.colorScheme.primary
+                                        }
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(40.dp)
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (followRequestStatus == "pending") {
+                                            Icon(
+                                                imageVector = Icons.Default.Schedule,
+                                                contentDescription = "Pending",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                        }
+                                        Text(buttonText)
                                     }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.error
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    
-                            ) {
-                                Text("Cerrar Sesión")
+                                }
+
+                                Button(
+                                    onClick = { 
+                                        navController.navigate(Screen.Chat.createRoute(user.id))
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(40.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text("Mensaje")
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Button(
+                                        onClick = { showEditDialog.value = true },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(40.dp)
+                                    ) {
+                                        Text("Editar Perfil")
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                                                .edit()
+                                                .remove("token")
+                                                .apply()
+                                            onLogout()
+                                            navController.navigate("auth") {
+                                                popUpTo(0) { inclusive = true }
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.error
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(40.dp)
+                                    ) {
+                                        Text("Cerrar Sesión")
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Grid de posts con mejor visualización
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                contentPadding = PaddingValues(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(posts) { post ->
+                if (canViewPosts) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        contentPadding = PaddingValues(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(posts) { post ->
+                            Box(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable {
+                                        //navController.navigate(Screen.PostDetail.createRoute(post.id))
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data("${AppConfig.BASE_URL}${post.imageUrl}")
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Post image",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
+                } else {
                     Box(
                         modifier = Modifier
-                            .aspectRatio(1f)
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable {
-                                //navController.navigate(Screen.PostDetail.createRoute(post.id))
-                            }
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data("${AppConfig.BASE_URL}${post.imageUrl}")
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Post image",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = "Private Account",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Esta cuenta es privada",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Sigue a este usuario para ver sus fotos",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
             }
+        }
+
+        if (showEditDialog.value && isCurrentUser) {
+            EditProfileDialog(
+                user = displayUser,
+                onDismiss = { showEditDialog.value = false },
+                onSave = { updatedData ->
+                    viewModel.updateProfile(user.id, updatedData)
+                    showEditDialog.value = false
+                }
+            )
         }
     }
 }

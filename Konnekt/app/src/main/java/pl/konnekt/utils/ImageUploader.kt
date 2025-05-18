@@ -27,6 +27,35 @@ object ImageUploader {
         }
     }
 
+    suspend fun uploadImageProfile(context: Context, imageUri: Uri, idUser: String): String {
+        return withContext(Dispatchers.IO) {
+            val file = createTempFileFromUriProfile(context, imageUri, idUser)
+            val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
+            // Use user ID in the form data name for server-side identification
+            val part = MultipartBody.Part.createFormData("profile_image", "profile_${idUser}.jpg", requestBody)
+            
+            try {
+                val response = KonnektApi.retrofitService.uploadImage(part)
+                response.imageUrl
+            } finally {
+                file.delete()
+            }
+        }
+    }
+
+    fun createTempFileFromUriProfile(context: Context, uri: Uri, idUser: String): File {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        // Create temp file with user ID in name
+        val tempFile = File.createTempFile("profile_${idUser}_", ".jpg", context.cacheDir)
+        
+        FileOutputStream(tempFile).use { outputStream ->
+            inputStream?.use { input ->
+                input.copyTo(outputStream)
+            }
+        }
+        
+        return tempFile
+    }
     fun createTempFileFromUri(context: Context, uri: Uri): File {
         val inputStream = context.contentResolver.openInputStream(uri)
         val tempFile = File.createTempFile("upload_", ".jpg", context.cacheDir)

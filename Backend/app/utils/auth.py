@@ -37,7 +37,8 @@ def decode_token(token: str) -> dict:
             "phone": payload.get("phone"),
             "birth_date": payload.get("birth_date"),
             "followers": payload.get("followers", []),
-            "following": payload.get("following", [])
+            "following": payload.get("following", []),
+            "private_account": payload.get("private_account", False)
         }
     except JWTError as e:
         print(f"JWT error: {str(e)}")

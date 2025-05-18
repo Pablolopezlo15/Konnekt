@@ -36,10 +36,10 @@ interface KonnektApiService {
     @GET("users/{userId}/following")
     suspend fun getUserFollowing(@Path("userId") userId: String): List<User>
 
-    @PUT("users/{userId}")
-    suspend fun updateUserProfile(
+    @PUT("users/{userId}/profile")
+    suspend fun updateProfile(
         @Path("userId") userId: String,
-        @Body updateRequest: Map<String, String>
+        @Body updates: Map<String, String>
     ): User
 
     @GET("messages/{chatId}")
@@ -97,4 +97,33 @@ interface KonnektApiService {
     suspend fun getAllPosts(
         @Header("Authorization") authorization: String
     ): List<Post>
+
+
+    @GET("users/{userId}/follow-request")
+    suspend fun checkFollowRequest(
+        @Path("userId") userId: String,
+        @Query("current_user_id") currentUserId: String
+    ): FriendRequest?
+
+    @GET("users/{userId}/follow-requests/received")
+    suspend fun getReceivedFollowRequests(
+        @Path("userId") userId: String
+    ): List<FriendRequest>
+    
+    @GET("users/{userId}/follow-requests/sent")
+    suspend fun getSentFollowRequests(
+        @Path("userId") userId: String
+    ): List<FriendRequest>
+    
+    @POST("users/{userId}/follow-request/accept")
+    suspend fun acceptFollowRequest(
+        @Path("userId") userId: String,
+        @Query("request_id") requestId: String
+    ): User
+    
+    @POST("users/{userId}/follow-request/reject")
+    suspend fun rejectFollowRequest(
+        @Path("userId") userId: String,
+        @Query("request_id") requestId: String
+    ): User
 }

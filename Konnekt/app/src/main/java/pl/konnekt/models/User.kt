@@ -11,7 +11,8 @@ data class User(
     @SerializedName("phone") val phone: String? = null,
     @SerializedName("birth_date") val birthDate: String? = null,
     @SerializedName("followers") val followers: List<String> = emptyList(),
-    @SerializedName("following") val following: List<String> = emptyList()
+    @SerializedName("following") val following: List<String> = emptyList(),
+    @SerializedName("private_account") val private_account: Boolean = false
 ) : Serializable
 
 fun createPabloUser() = User(
@@ -23,6 +24,7 @@ fun createPabloUser() = User(
     birthDate = null,
     followers = emptyList(),
     following = emptyList(),
+    private_account = false
 )
 
 data class UserCreate(
@@ -35,14 +37,15 @@ data class UserCreate(
 )
 
 data class UserResponse(
-    val _id: String,
-    val username: String,
-    val email: String,
-    val profileImageUrl: String? = null,
-    val phone: String? = null,
-    val birthDate: String? = null,
-    val followers: List<String> = emptyList(),
-    val following: List<String> = emptyList()
+    @SerializedName("_id") val _id: String,
+    @SerializedName("username") val username: String,
+    @SerializedName("email") val email: String,
+    @SerializedName("profile_image_url") val profileImageUrl: String? = null,
+    @SerializedName("phone") val phone: String? = null,
+    @SerializedName("birth_date") val birthDate: String? = null,
+    @SerializedName("followers") val followers: List<String> = emptyList(),
+    @SerializedName("following") val following: List<String> = emptyList(),
+    @SerializedName("private_account") val private_account: Boolean = false
 )
 
 data class LoginResponse(

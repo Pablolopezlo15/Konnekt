@@ -1,5 +1,6 @@
 package pl.konnekt.navigation
 
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -16,6 +17,7 @@ import pl.konnekt.models.User
 import pl.konnekt.ui.components.*
 import pl.konnekt.ui.screens.CommentsScreen
 import pl.konnekt.ui.screens.CreatePostScreen
+import pl.konnekt.ui.screens.NotificationsScreen
 import pl.konnekt.utils.TokenDecoder
 import pl.konnekt.viewmodel.ChatViewModel
 import pl.konnekt.viewmodel.UserListViewModel
@@ -62,13 +64,12 @@ fun AppNavigation(
                 navArgument("userId") { type = NavType.StringType }
             )
         ) { backStackEntry ->
-            val userId = backStackEntry.arguments?.getString("userId")
+            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
             val userViewModel = remember { UserViewModel() }
+            val currentUserId = TokenDecoder.getUserIdFromToken(token)
 
             LaunchedEffect(userId) {
-                userId?.let { id ->
-                    userViewModel.loadUserProfile(id)
-                }
+                currentUserId?.let { userViewModel.loadUserProfile(userId, it) }
             }
 
             val userProfile by userViewModel.userProfile.collectAsState()
@@ -76,17 +77,23 @@ fun AppNavigation(
             ProfileScreen(
                 navController = navController,
                 user = userProfile ?: User(
-                    id = userId ?: "",
+                    id = userId,
                     username = "Loading...",
                     email = "",
                     phone = null,
                     profileImageUrl = null,
                     followers = emptyList(),
-                    following = emptyList()
+                    following = emptyList(),
+                    private_account = false
                 ),
                 onLogout = onLogout,
-                currentUserId = TokenDecoder.getUserIdFromToken(token)
+                currentUserId = currentUserId,
+                viewModel = userViewModel
             )
+        }
+
+        composable("notifications") {
+            NotificationsScreen(currentUserId = TokenDecoder.getUserIdFromToken(token))
         }
 
         composable(Screen.UserList.route) {
@@ -122,7 +129,8 @@ fun AppNavigation(
             val userViewModel = remember { UserViewModel() }
 
             LaunchedEffect(recipientId) {
-                userViewModel.loadUserProfile(recipientId)
+                TokenDecoder.getUserIdFromToken(token)
+                    ?.let { userViewModel.loadUserProfile(recipientId, it) }
             }
 
             val recipientProfile by userViewModel.userProfile.collectAsState()

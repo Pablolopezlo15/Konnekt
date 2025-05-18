@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from enum import Enum
 
@@ -14,7 +14,18 @@ class UserCreate(BaseModel):
     phone: Optional[str] = None
     birth_date: Optional[str] = None
     profile_image_url: Optional[str] = None
-    private_account: Optional[bool] = False
+    private_account: bool = False
+
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    birth_date: Optional[str] = None
+    profile_image_url: Optional[str] = None
+    username: Optional[str] = None
+    private_account: Optional[bool] = None
+
+    class Config:
+        extra = "allow"
 
 class UserResponse(BaseModel):
     id: str
@@ -25,7 +36,7 @@ class UserResponse(BaseModel):
     birth_date: Optional[str] = None
     followers: List[str] = []
     following: List[str] = []
-    private_account: Optional[bool] = False
+    private_account: bool = False
 
 class UserLogin(BaseModel):
     username: str
@@ -38,3 +49,4 @@ class FriendRequest(BaseModel):
     status: RequestStatus = RequestStatus.PENDING
     created_at: str
     updated_at: Optional[str] = None
+

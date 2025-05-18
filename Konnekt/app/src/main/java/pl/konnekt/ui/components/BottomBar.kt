@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,7 +29,7 @@ fun BottomBar(navController: NavController) {
 
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
-            label = { Text("Home") },
+            //label = { Text("Home") },
             selected = currentRoute == Screen.Home.route,
             onClick = {
                 navController.navigate(Screen.Home.route) {
@@ -39,7 +40,7 @@ fun BottomBar(navController: NavController) {
 
         NavigationBarItem(
             icon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-            label = { Text("Search") },
+            //label = { Text("Search") },
             selected = currentRoute == Screen.Search.route,
             onClick = {
                 navController.navigate(Screen.Search.route) {
@@ -49,11 +50,26 @@ fun BottomBar(navController: NavController) {
         )
 
         NavigationBarItem(
+            icon = { Icon(Icons.Filled.AddCircle, contentDescription = "Create Post") },
+            //label = { Text("Create") },
+            selected = currentRoute == Screen.CreatePost.route,
+            onClick = { navController.navigate(Screen.CreatePost.route) }
+        )
+
+        NavigationBarItem(
+            icon = { Icon(Icons.Default.Favorite, contentDescription = "Notificaciones") },
+            //label = { Text("Notificaciones") },
+            selected = currentRoute == Screen.Notifications.route,
+            onClick = {
+                navController.navigate("notifications")
+            }
+        )
+        
+        NavigationBarItem(
             icon = { Icon(Icons.Filled.Person, contentDescription = "Profile") },
-            label = { Text("Profile") },
+            //label = { Text("Profile") },
             selected = currentRoute == Screen.Profile.route,
             onClick = {
-                // When navigating to own profile
                 currentUserId?.let { userId ->
                     navController.navigate(Screen.Profile.createRoute(userId)) {
                         launchSingleTop = true
@@ -61,13 +77,6 @@ fun BottomBar(navController: NavController) {
                     }
                 }
             }
-        )
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Filled.AddCircle, contentDescription = "Create Post") },
-            label = { Text("Create") },
-            selected = currentRoute == Screen.CreatePost.route,
-            onClick = { navController.navigate(Screen.CreatePost.route) }
         )
     }
 }
