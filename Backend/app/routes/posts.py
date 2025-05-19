@@ -21,10 +21,21 @@ from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form, Re
 async def create_post(
     request: Request,  # Add request parameter
     caption: str = Form(...),
-    image: UploadFile = File(...),
+    image: UploadFile = File(..., description="Image file (max 16MB)"),
     authorization: str | None = Header(default=None, alias="Authorization")
 ):
     try:
+        # Verificar tamaño del archivo
+        contents = await image.read()
+        if len(contents) > 16 * 1024 * 1024:  # 10MB limit
+            raise HTTPException(
+                status_code=413,
+                detail="El archivo es demasiado grande. El tamaño máximo permitido es 10MB"
+            )
+        
+        # Restablecer el puntero del archivo para su posterior uso
+        await image.seek(0)
+        
         print("Received request with:")
         print(f"Caption: {caption}")
         print(f"Image filename: {image.filename}")

@@ -23,6 +23,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.rememberSwipeableState
 import androidx.compose.material.swipeable
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -33,6 +34,9 @@ import pl.konnekt.viewmodel.PostViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -45,9 +49,25 @@ fun MainScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     
     LaunchedEffect(Unit) {
+        // Forzar recarga de posts
+        postViewModel.clearPosts()
         postViewModel.getAllPosts(context)
     }
     
+    // Añadir un efecto para recargar cuando se vuelve a la pantalla
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                postViewModel.clearPosts()
+                postViewModel.getAllPosts(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     Box(
         modifier = modifier
             .fillMaxSize()

@@ -36,9 +36,13 @@ class PostViewModel : ViewModel() {
             try {
                 _isLoading.value = true
                 
-                // Get token and add Bearer prefix
                 val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
                     .getString("token", "") ?: ""
+                if (token.isEmpty()) {
+                    _error.value = "No se encontró el token de autenticación"
+                    return@launch
+                }
+                
                 val authHeader = "Bearer $token"
                 
                 val file = ImageUploader.createTempFileFromUri(context, imageUri)
@@ -46,10 +50,14 @@ class PostViewModel : ViewModel() {
                 val imagePart = MultipartBody.Part.createFormData("image", file.name, requestBody)
                 val captionPart = caption.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                val post = KonnektApi.retrofitService.createPost(authHeader, captionPart, imagePart)
-                _posts.value = listOf(post) + _posts.value
+                try {
+                    val post = KonnektApi.retrofitService.createPost(authHeader, captionPart, imagePart)
+                    _posts.value = listOf(post) + _posts.value
+                } finally {
+                    file.delete() // Aseguramos que el archivo temporal se elimine
+                }
             } catch (e: Exception) {
-                _error.value = e.message
+                _error.value = "Error al crear la publicación: ${e.message}"
             } finally {
                 _isLoading.value = false
             }

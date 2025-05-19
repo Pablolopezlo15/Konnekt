@@ -57,7 +57,7 @@ interface KonnektApiService {
     @Multipart
     @POST("posts")
     suspend fun createPost(
-        @Header("Authorization") authorization: String,  // Changed parameter name to match backend
+        @Header("Authorization") authorization: String,
         @Part("caption") caption: RequestBody,
         @Part image: MultipartBody.Part
     ): Post
@@ -126,4 +126,11 @@ interface KonnektApiService {
         @Path("userId") userId: String,
         @Query("request_id") requestId: String
     ): User
+
+    @Multipart
+    @POST("users/{userId}/profile-image")
+    suspend fun uploadProfileImage(
+        @Path("userId") userId: String,
+        @Part image: MultipartBody.Part
+    ): ImageUploadResponse
 }

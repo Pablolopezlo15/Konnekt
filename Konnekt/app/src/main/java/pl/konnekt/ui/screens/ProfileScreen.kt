@@ -93,12 +93,20 @@ fun ProfileScreen(
             } else {
                 Row {
                     AsyncImage(
-                        model = "${AppConfig.BASE_URL}${displayUser.profileImageUrl}",
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data("${AppConfig.BASE_URL}${displayUser.profileImageUrl}")
+                            .crossfade(true)
+                            .build(),
                         contentDescription = "Profile picture of ${displayUser.username}",
                         modifier = Modifier
                             .size(90.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable(enabled = isCurrentUser) {
+                                if (isCurrentUser) {
+                                    showEditDialog.value = true
+                                }
+                            }
                     )
                     Column {
                         Text(
@@ -160,7 +168,8 @@ fun ProfileScreen(
                                 ) {
                                     Row(
                                         horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
                                         if (followRequestStatus == "pending") {
                                             Icon(
@@ -170,7 +179,11 @@ fun ProfileScreen(
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
                                         }
-                                        Text(buttonText)
+                                        Text(
+                                            text = buttonText,
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
                                     }
                                 }
 
@@ -185,7 +198,11 @@ fun ProfileScreen(
                                         containerColor = MaterialTheme.colorScheme.primary
                                     )
                                 ) {
-                                    Text("Mensaje")
+                                    Text(
+                                        text = "Mensaje",
+                                        maxLines = 1,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
                                 }
                             } else {
                                 Row(

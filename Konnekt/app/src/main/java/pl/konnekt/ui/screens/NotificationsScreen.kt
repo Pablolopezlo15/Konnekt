@@ -1,5 +1,6 @@
 package pl.konnekt.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -105,6 +106,7 @@ fun NotificationsScreen(
                         items = sentRequests,
                         key = { it.id }
                     ) { request ->
+                        Log.d("NotificationsScreen", "Request: $request")
                         RequestItem(
                             request = request,
                             isPending = true

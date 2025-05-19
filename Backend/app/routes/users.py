@@ -453,14 +453,44 @@ async def get_sent_follow_requests(user_id: str):
         
         response = []
         for request in requests:
+            # Obtener información del remitente
+            sender = await users_collection.find_one({"_id": ObjectId(request["sender_id"])})
+            # Obtener información del receptor
             receiver = await users_collection.find_one({"_id": ObjectId(request["receiver_id"])})
+            
             request["id"] = str(request["_id"])
+            # Agregar información del remitente
+            request["senderUsername"] = sender["username"] if sender else "Unknown"
+            request["senderProfileImage"] = sender.get("profile_image_url") if sender else None
+            # Agregar información del receptor
             request["receiverUsername"] = receiver["username"] if receiver else "Unknown"
             request["receiverProfileImage"] = receiver.get("profile_image_url") if receiver else None
             del request["_id"]
             response.append(FriendRequest(**request))
-            
+            print(request)
         return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/upload")
+async def upload_image(image: UploadFile = File(...)):
+    try:
+        # Crear el directorio de uploads si no existe
+        UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
+        if not os.path.exists(UPLOAD_DIR):
+            os.makedirs(UPLOAD_DIR)
+        
+        # Generar un nombre único para el archivo
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{image.filename}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        
+        # Guardar el archivo
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+        
+        # Devolver la URL relativa del archivo
+        return {"imageUrl": f"/uploads/{filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
         

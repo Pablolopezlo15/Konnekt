@@ -18,7 +18,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import pl.konnekt.ui.components.ImagePicker
+import pl.konnekt.utils.ImageUploader
 import pl.konnekt.viewmodel.PostViewModel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @Composable
 fun CreatePostScreen(
@@ -27,8 +30,11 @@ fun CreatePostScreen(
 ) {
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var caption by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val isLoading by viewModel.isLoading.collectAsState()
+    // Añadir el scope para manejar corrutinas
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -130,8 +136,28 @@ fun CreatePostScreen(
                     Button(
                         onClick = {
                             selectedImageUri?.let { uri ->
-                                viewModel.createPost(context, uri, caption)
-                                onPostCreated()
+                                try {
+                                    viewModel.createPost(context, uri, caption)
+                                    scope.launch {
+                                        delay(500)
+                                        onPostCreated()
+                                    }
+                                } catch (e: ImageUploader.ImageUploadError) {
+                                    errorMessage = when (e) {
+                                        is ImageUploader.ImageUploadError.InvalidImage -> 
+                                            "La imagen seleccionada no es válida"
+                                        is ImageUploader.ImageUploadError.FileTooLarge -> 
+                                            "La imagen es demasiado grande"
+                                        is ImageUploader.ImageUploadError.NetworkError -> 
+                                            "Error de conexión"
+                                        is ImageUploader.ImageUploadError.CompressionError -> 
+                                            "Error al procesar la imagen: ${e.message}"
+                                        is ImageUploader.ImageUploadError.ServerError -> 
+                                            "Error en el servidor: ${e.message}"
+                                        is ImageUploader.ImageUploadError.UnknownError -> 
+                                            "Error inesperado: ${e.cause?.message}"
+                                    }
+                                }
                             }
                         },
                         enabled = !isLoading && caption.isNotBlank(),
