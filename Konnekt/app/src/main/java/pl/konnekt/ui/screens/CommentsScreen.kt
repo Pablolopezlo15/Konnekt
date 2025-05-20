@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.konnekt.config.AppConfig
 import pl.konnekt.models.Comment
 import pl.konnekt.ui.components.LocalNavController
 import pl.konnekt.viewmodel.PostViewModel
@@ -30,13 +32,19 @@ import java.util.Locale
 fun CommentsScreen(postId: String) {
     val postViewModel: PostViewModel = viewModel()
     val comments by postViewModel.comments.collectAsState()
+    var postImageUrl by remember { mutableStateOf("") }
     val context = LocalContext.current
     val navController = LocalNavController.current
     var commentText by remember { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState()
+    val isGeneratingComment by postViewModel.isGeneratingComment.collectAsState()
 
     LaunchedEffect(postId) {
         postViewModel.getComments(postId, context)
+        val post = postViewModel.getPost(postId, context)
+        post?.let {
+            postImageUrl = it.imageUrl
+        }
     }
 
     ModalBottomSheet(
@@ -73,7 +81,7 @@ fun CommentsScreen(postId: String) {
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
-                    placeholder = { Text("Agregar un comentario...") },
+                    placeholder = { Text("Escribe...") },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(
                         onSend = {
@@ -92,6 +100,35 @@ fun CommentsScreen(postId: String) {
                     )
                 )
                 Spacer(modifier = Modifier.width(8.dp))
+                
+                // Botón para generar comentario con IA
+                IconButton(
+                    onClick = {
+                        postViewModel.generateAIComment(
+                            "${AppConfig.BASE_URL}$postImageUrl",
+                            context
+                        ) { generatedComment ->
+                            commentText = generatedComment
+                        }
+                    },
+                    enabled = !isGeneratingComment
+                ) {
+                    if (isGeneratingComment) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = "Generar comentario con IA",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
                 IconButton(
                     onClick = {
                         if (commentText.isNotBlank()) {

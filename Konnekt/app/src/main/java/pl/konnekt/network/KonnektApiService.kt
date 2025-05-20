@@ -93,11 +93,22 @@ interface KonnektApiService {
         @Path("postId") postId: String
     ): List<pl.konnekt.models.Comment>
 
+    @POST("generate-comment")
+    suspend fun generateComment(
+        @Header("Authorization") authorization: String,
+        @Body requestBody: Map<String, String>
+    ): IACommentResponse
+
     @GET("posts")
     suspend fun getAllPosts(
         @Header("Authorization") authorization: String
     ): List<Post>
 
+    @GET("getposts/{postId}")
+    suspend fun getPostDetails(
+        @Header("Authorization") authorization: String,
+        @Path("postId") postId: String
+    ): Post
 
     @GET("users/{userId}/follow-request")
     suspend fun checkFollowRequest(

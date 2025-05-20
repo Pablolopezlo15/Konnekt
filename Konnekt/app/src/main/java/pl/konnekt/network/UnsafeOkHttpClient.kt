@@ -17,6 +17,8 @@ object UnsafeOkHttpClient {
             sslContext.init(null, trustAllCerts, java.security.SecureRandom())
 
             return OkHttpClient.Builder()
+                .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                 .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
                 .hostnameVerifier { _, _ -> true }
                 .build()

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import users, posts, messages
+from app.routes import users, posts, messages, ai_routes
 from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
@@ -21,3 +21,4 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(posts.router)
 app.include_router(messages.router)
+app.include_router(ai_routes.router)

@@ -1,14 +1,18 @@
 package pl.konnekt.viewmodel
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -17,6 +21,12 @@ import pl.konnekt.models.Comment
 import pl.konnekt.models.Post
 import pl.konnekt.network.KonnektApi
 import pl.konnekt.utils.ImageUploader
+import java.io.ByteArrayOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import javax.net.ssl.HostnameVerifier
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class PostViewModel : ViewModel() {
     private val _posts = MutableStateFlow<List<Post>>(emptyList())
@@ -47,7 +57,8 @@ class PostViewModel : ViewModel() {
                 
                 val file = ImageUploader.createTempFileFromUri(context, imageUri)
                 val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
-                val imagePart = MultipartBody.Part.createFormData("image", file.name, requestBody)
+                // El nombre del archivo no es relevante ya que el servidor lo renombrará
+                val imagePart = MultipartBody.Part.createFormData("image", "image.jpg", requestBody)
                 val captionPart = caption.toRequestBody("text/plain".toMediaTypeOrNull())
 
                 try {
@@ -81,6 +92,24 @@ class PostViewModel : ViewModel() {
             }
         }
     }
+
+    suspend fun getPost(postId: String, context: Context): Post? {
+        return try {
+            _isLoading.value = true
+            val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                .getString("token", "") ?: ""
+            val authHeader = "Bearer $token"
+            KonnektApi.retrofitService.getPostDetails(authHeader, postId)
+
+        } catch (e: Exception) {
+            _error.value = e.message
+            null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+    
+
 
     fun likePost(postId: String, context: Context, isLiked: Boolean, callback: (Boolean, Boolean, Int) -> Unit) {
         viewModelScope.launch {
@@ -230,5 +259,95 @@ class PostViewModel : ViewModel() {
 
     fun clearComments() {
         _comments.value = emptyList()
+    }
+
+    
+    private val _isGeneratingComment = MutableStateFlow(false)
+    val isGeneratingComment: StateFlow<Boolean> = _isGeneratingComment.asStateFlow()
+    
+    @OptIn(ExperimentalEncodingApi::class)
+    fun generateAIComment(url: String, context: Context, onSuccess: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                _isGeneratingComment.value = true
+                Log.d("PostViewModel", "Iniciando generación de comentario IA")
+    
+                // Obtener token
+                val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    .getString("token", "") ?: ""
+                if (token.isEmpty()) {
+                    _error.value = "No se encontró el token de autenticación"
+                    return@launch
+                }
+                val authHeader = "Bearer $token"
+    
+                // Usar el cliente OkHttp inseguro para la conexión
+                val client = UnsafeOkHttpClient.getUnsafeOkHttpClient()
+                val connection = URL(url).openConnection() as HttpURLConnection
+                
+                // Configurar la conexión para aceptar cualquier certificado
+                if (connection is javax.net.ssl.HttpsURLConnection) {
+                    connection.sslSocketFactory = client.sslSocketFactory
+                    connection.hostnameVerifier = client.hostnameVerifier
+                }
+    
+                // Descargar y convertir imagen a base64
+                val base64Image = withContext(Dispatchers.IO) {
+                    try {
+                        connection.apply {
+                            connectTimeout = 15000
+                            readTimeout = 15000
+                            requestMethod = "GET"
+                            setRequestProperty("User-Agent", "Mozilla/5.0")
+                            setRequestProperty("Accept", "image/*")
+                        }
+    
+                        Log.d("PostViewModel", "Conectando a la URL de la imagen: $url")
+                        connection.connect()
+    
+                        if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                            connection.inputStream.use { input ->
+                                val bitmap = BitmapFactory.decodeStream(input)
+                                ByteArrayOutputStream().use { output ->
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, output)
+                                    Base64.encode(output.toByteArray())
+                                }
+                            }
+                        } else {
+                            Log.e("PostViewModel", "Error HTTP: ${connection.responseCode}")
+                            null
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PostViewModel", "Error al cargar la imagen: ${e.message}", e)
+                        null
+                    } finally {
+                        connection.disconnect()
+                    }
+                }
+
+                if (base64Image == null) {
+                    _error.value = "No se pudo cargar la imagen. Verifica la URL."
+                    return@launch
+                }
+
+                // Enviar solicitud a la API
+                val requestBody = mapOf("url" to base64Image)
+                Log.d("PostViewModel", "Enviando solicitud a la API con base64")
+
+                val response = KonnektApi.retrofitService.generateComment(authHeader, requestBody)
+                if (response.comment != null) {
+                    _error.value = null
+                    onSuccess(response.comment!!)
+                } else {
+                    _error.value = "No se recibió un comentario válido de la API"
+                }
+
+            } catch (e: Exception) {
+                Log.e("PostViewModel", "Error generando comentario IA: ${e.message}", e)
+                _error.value = "Error al generar comentario: ${e.message}"
+            } finally {
+                _isGeneratingComment.value = false
+            }
+        }
     }
 }

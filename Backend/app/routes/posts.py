@@ -77,17 +77,19 @@ async def create_post(
         user_id = user_data["user_id"]
         username = user_data["username"]
         
-        # Create unique filename
+        # Generar nombre único para la imagen
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        filename = f"{user_id}_{timestamp}_{image.filename}"
-        file_path = os.path.join(UPLOAD_DIR, filename)
+        file_extension = os.path.splitext(image.filename)[1]
+        unique_filename = f"post_{user_id}_{timestamp}{file_extension}"
+        
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
         
         # Save the file
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
-        
+        print(f"File saved at: {file_path}")
         # Create relative path for database
-        relative_path = f"/uploads/{filename}"
+        relative_path = f"/uploads/{unique_filename}"
         
         post_doc = {
             "author_id": user_id,
@@ -215,6 +217,65 @@ async def get_user_posts(
         return response_posts
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/getposts/{post_id}", response_model=PostResponse)
+async def get_post(post_id: str, authorization: str | None = Header(default=None, alias="Authorization")):
+    try:
+        if not authorization:
+            raise HTTPException(
+                status_code=401,
+                detail="Authorization header is required. Use format: Bearer <token>"
+            )
+
+        try:
+            if authorization.startswith("Bearer "):
+                token = authorization.split(" ")[1]
+            else:
+                token = authorization
+
+            user_data = decode_token(token)
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            raise HTTPException(status_code=401, detail="Invalid authentication token")
+
+        user_id = user_data["user_id"]
+
+        # Check if post exists
+        post = await posts_collection.find_one({"_id": ObjectId(post_id)})
+        if not post:
+            raise HTTPException(
+                status_code=404,
+                detail="Post not found"
+            )
+
+        # Check if current user liked this post
+        is_liked = await likes_collection.find_one({
+            "user_id": user_id,
+            "post_id": post_id
+        }) is not None
+
+        post_dict = {
+            "id": str(post["_id"]),
+            "author_id": post["author_id"],
+            "author_username": post["author_username"],
+            "image_url": post["image_url"],
+            "caption": post["caption"],
+            "timestamp": post["timestamp"],
+            "likes_count": post["likes_count"],
+            "comments_count": post["comments_count"],
+            "is_liked": is_liked
+        }
+        print(f"Post data: {post_dict}")
+        return post_dict
+    except HTTPException as e:
+        # Re-raise HTTPException to ensure 401, 404, etc., are returned correctly
+        raise e
+    except Exception as e:
+        # Handle unexpected errors
+        print(f"Unexpected error in get_post: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/posts/{post_id}/like")
 async def like_post(
