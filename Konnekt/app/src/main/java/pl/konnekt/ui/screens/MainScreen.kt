@@ -104,6 +104,9 @@ fun MainScreen(modifier: Modifier = Modifier) {
                         },
                         onCommentClick = { postId -> 
                             navController.navigate("post/$postId/comments")
+                        },
+                        onSaveClick = { postId, isSaved, callback ->
+                            postViewModel.savePost(postId, context, callback)
                         }
                     )
                 }

@@ -20,6 +20,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import pl.konnekt.models.Comment
 import pl.konnekt.models.Post
 import pl.konnekt.network.KonnektApi
+import pl.konnekt.network.UnsafeOkHttpClient
 import pl.konnekt.utils.ImageUploader
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
@@ -347,6 +348,52 @@ class PostViewModel : ViewModel() {
                 _error.value = "Error al generar comentario: ${e.message}"
             } finally {
                 _isGeneratingComment.value = false
+            }
+        }
+    }
+
+    private val _savedPosts = MutableStateFlow<List<Post>>(emptyList())
+    val savedPosts: StateFlow<List<Post>> = _savedPosts.asStateFlow()
+
+    fun savePost(postId: String, context: Context, callback: (Boolean, Boolean) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    .getString("token", "") ?: ""
+                val authHeader = "Bearer $token"
+                
+                val response = KonnektApi.retrofitService.savePost(authHeader, postId)
+                val isSaved = response["message"] == "Post guardado exitosamente"
+                
+                // Actualizar el estado del post en la lista
+                _posts.value = _posts.value.map { post ->
+                    if (post.id == postId) {
+                        post.copy(isSaved = isSaved)
+                    } else post
+                }
+                
+                callback(true, isSaved)
+            } catch (e: Exception) {
+                _error.value = "Error al guardar el post: ${e.message}"
+                callback(false, false)
+            }
+        }
+    }
+
+    fun getSavedPosts(userId: String, context: Context) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    .getString("token", "") ?: ""
+                val authHeader = "Bearer $token"
+                
+                val savedPosts = KonnektApi.retrofitService.getSavedPosts(authHeader, userId)
+                _savedPosts.value = savedPosts
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
             }
         }
     }

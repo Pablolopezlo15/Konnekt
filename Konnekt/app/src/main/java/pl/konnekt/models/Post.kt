@@ -32,6 +32,8 @@ import coil.request.ImageRequest
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import java.io.Serializable
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 
 data class Post(
     @SerializedName("id") val id: String,
@@ -42,14 +44,16 @@ data class Post(
     @SerializedName("timestamp") val timestamp: String,
     @SerializedName("likes_count") var likesCount: Int,
     @SerializedName("comments_count") val commentsCount: Int,
-    @SerializedName("is_liked") var isLiked: Boolean = false
+    @SerializedName("is_liked") var isLiked: Boolean = false,
+    @SerializedName("is_saved") var isSaved: Boolean = false
 ) : Serializable
 
 @Composable
 fun PostItem(
     post: Post,
     onLikeClick: (String, Boolean, (Boolean, Boolean, Int) -> Unit) -> Unit = { _, _, _ -> },
-    onCommentClick: (String) -> Unit = {}
+    onCommentClick: (String) -> Unit = {},
+    onSaveClick: (String, Boolean, (Boolean, Boolean) -> Unit) -> Unit = { _, _, _ -> }
 ) {
     val context = LocalContext.current
     val imageLoader = remember { CoilConfig.getImageLoader(context) }
@@ -116,7 +120,7 @@ fun PostItem(
             modifier = Modifier.padding(8.dp)
         ) {
             AsyncImage(
-                model = "${AppConfig.BASE_URL}${post.imageUrl}",
+                model = "${AppConfig.BASE_URL}${post.authorId}.jpg",
                 contentDescription = "Profile picture of ${post.authorUsername}",
                 imageLoader = imageLoader,
                 modifier = Modifier
@@ -139,12 +143,12 @@ fun PostItem(
                 .height(350.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(
-                        onDoubleTap = { _ -> onLikeAction() } // Corrección: Ignorar Offset
+                        onDoubleTap = { _ -> onLikeAction() }
                     )
                 }
         ) {
             var isLoading by remember { mutableStateOf(true) }
-            
+
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(if (!imageLoadError) "${AppConfig.BASE_URL}${post.imageUrl}" else null)
@@ -184,6 +188,17 @@ fun PostItem(
             fontSize = 14.sp
         )
 
+        // Local state for save status
+        var isSavedLocal by remember(post.id) { mutableStateOf(post.isSaved) }
+        var isProcessingSave by remember { mutableStateOf(false) }
+
+        // Sync with global state when post changes
+        LaunchedEffect(post.id, post.isSaved) {
+            if (isSavedLocal != post.isSaved) {
+                isSavedLocal = post.isSaved
+            }
+        }
+
         // Actions row
         Row(
             modifier = Modifier
@@ -192,8 +207,11 @@ fun PostItem(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             IconButton(
-                onClick = onLikeAction,
-                enabled = !isProcessingLike
+                onClick = { 
+                    if (!isProcessingLike) {
+                        onLikeAction()
+                    }
+                }
             ) {
                 Icon(
                     imageVector = if (isLikedLocal) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -206,6 +224,30 @@ fun PostItem(
                 Icon(
                     imageVector = Icons.Default.Email,
                     contentDescription = "Comment"
+                )
+            }
+            IconButton(
+                onClick = { 
+                    if (!isProcessingSave) {
+                        isProcessingSave = true
+                        val newIsSaved = !isSavedLocal
+                        isSavedLocal = newIsSaved
+                        onSaveClick(post.id, newIsSaved) { success, serverIsSaved ->
+                            if (!success) {
+                                isSavedLocal = !newIsSaved
+                            } else {
+                                isSavedLocal = serverIsSaved
+                            }
+                            isProcessingSave = false
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = if (isSavedLocal) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    contentDescription = if (isSavedLocal) "Unsave" else "Save",
+                    tint = if (isSavedLocal) MaterialTheme.colorScheme.primary else Color.Gray,
+                    modifier = Modifier.animateContentSize()
                 )
             }
         }

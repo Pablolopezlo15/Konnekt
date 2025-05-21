@@ -139,9 +139,22 @@ interface KonnektApiService {
     ): User
 
     @Multipart
-    @POST("users/{userId}/profile-image")
+    @POST("upload")
     suspend fun uploadProfileImage(
-        @Path("userId") userId: String,
-        @Part image: MultipartBody.Part
+        @Header("Authorization") authorization: String,
+        @Part image: MultipartBody.Part,
+        @Query("user_id") userId: String
     ): ImageUploadResponse
+
+    @POST("posts/{postId}/save")
+    suspend fun savePost(
+        @Header("Authorization") authorization: String,
+        @Path("postId") postId: String
+    ): Map<String, String>
+
+    @GET("posts/saved/{userId}")
+    suspend fun getSavedPosts(
+        @Header("Authorization") authorization: String,
+        @Path("userId") userId: String
+    ): List<Post>
 }

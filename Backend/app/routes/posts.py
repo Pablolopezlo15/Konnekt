@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form
 from typing import List
 from ..models.post import PostCreate, PostResponse, CommentCreate, CommentResponse
-from ..database import posts_collection, comments_collection, likes_collection
+from ..database import posts_collection, comments_collection, likes_collection, saved_posts_collection
 from ..utils.auth import decode_token  # Add this import
 from datetime import datetime
 from bson import ObjectId
@@ -398,5 +398,114 @@ async def get_post_comments(post_id: str):
     try:
         comments = await comments_collection.find({"post_id": post_id}).sort("timestamp", -1).to_list(100)
         return [CommentResponse(id=str(comment["_id"]), **{k:v for k,v in comment.items() if k != "_id"}) for comment in comments]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/posts/{post_id}/save")
+async def save_post(post_id: str, authorization: str | None = Header(default=None, alias="Authorization")):
+    try:
+        if not authorization:
+            raise HTTPException(
+                status_code=401,
+                detail="Se requiere el encabezado de autorización"
+            )
+        
+        try:
+            if authorization.startswith("Bearer "):
+                token = authorization.split(" ")[1]
+            else:
+                token = authorization
+                
+            user_data = decode_token(token)
+        except Exception as e:
+            raise HTTPException(status_code=401, detail="Token de autenticación inválido")
+
+        user_id = user_data["user_id"]
+        
+        # Verificar si el post existe
+        post = await posts_collection.find_one({"_id": ObjectId(post_id)})
+        if not post:
+            raise HTTPException(status_code=404, detail="Post no encontrado")
+        
+        # Verificar si ya está guardado
+        saved_post = await saved_posts_collection.find_one({
+            "user_id": user_id,
+            "post_id": post_id
+        })
+        
+        if saved_post:
+            # Si ya está guardado, lo eliminamos
+            await saved_posts_collection.delete_one({"_id": saved_post["_id"]})
+            return {"message": "Post eliminado de guardados", "is_saved": False}
+        else:
+            # Si no está guardado, lo guardamos
+            saved_post_doc = {
+                "user_id": user_id,
+                "post_id": post_id,
+                "saved_at": datetime.utcnow().isoformat()
+            }
+            await saved_posts_collection.insert_one(saved_post_doc)
+            return {"message": "Post guardado exitosamente", "is_saved": True}
+            
+    except Exception as e:
+        print(f"Error al guardar/eliminar post: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/posts/saved/{user_id}", response_model=List[PostResponse])
+async def get_saved_posts(
+    user_id: str,
+    authorization: str | None = Header(default=None, alias="Authorization")
+):
+    try:
+        if not authorization:
+            raise HTTPException(
+                status_code=401,
+                detail="Se requiere el encabezado de autorización"
+            )
+        
+        try:
+            if authorization.startswith("Bearer "):
+                token = authorization.split(" ")[1]
+            else:
+                token = authorization
+                
+            user_data = decode_token(token)
+        except Exception as e:
+            raise HTTPException(status_code=401, detail="Token de autenticación inválido")
+
+        current_user_id = user_data["user_id"]
+        
+        # Obtener los posts guardados del usuario
+        saved_posts = await saved_posts_collection.find({"user_id": user_id}).to_list(100)
+        saved_post_ids = [ObjectId(post["post_id"]) for post in saved_posts]
+        
+        # Obtener los detalles completos de los posts guardados
+        posts = await posts_collection.find({"_id": {"$in": saved_post_ids}}).to_list(100)
+        
+        response_posts = []
+        for post in posts:
+            is_liked = await likes_collection.find_one({
+                "user_id": current_user_id,
+                "post_id": str(post["_id"])
+            }) is not None
+            
+            is_saved = True  # Ya sabemos que está guardado
+            
+            post_dict = {
+                "id": str(post["_id"]),
+                "author_id": post["author_id"],
+                "author_username": post["author_username"],
+                "image_url": post["image_url"],
+                "caption": post["caption"],
+                "timestamp": post["timestamp"],
+                "likes_count": post["likes_count"],
+                "comments_count": post["comments_count"],
+                "is_liked": is_liked,
+                "is_saved": is_saved
+            }
+            response_posts.append(post_dict)
+            
+        return response_posts
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
