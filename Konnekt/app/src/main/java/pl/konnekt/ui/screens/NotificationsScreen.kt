@@ -67,6 +67,7 @@ fun NotificationsScreen(
 
             LazyColumn {
                 if (receivedRequests.isNotEmpty()) {
+                    Log.d("NotificationsScreen", "Received Requests: $receivedRequests")
                     item {
                         Text(
                             text = "Recibidas",
@@ -78,6 +79,7 @@ fun NotificationsScreen(
                         items = receivedRequests,
                         key = { it.id }
                     ) { request ->
+                        Log.d("NotificationsScreen", "Request: $request")
                         RequestItem(
                             request = request,
                             onAccept = { 

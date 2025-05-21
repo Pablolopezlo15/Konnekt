@@ -46,7 +46,9 @@ class FriendRequest(BaseModel):
     id: str
     sender_id: str
     receiver_id: str
-    status: RequestStatus = RequestStatus.PENDING
+    status: str
     created_at: str
-    updated_at: Optional[str] = None
-
+    senderUsername: str | None
+    senderProfileImage: str | None
+    receiverUsername: str | None
+    receiverProfileImage: str | None

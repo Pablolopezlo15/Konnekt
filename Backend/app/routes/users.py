@@ -432,10 +432,18 @@ async def get_received_follow_requests(user_id: str):
         
         response = []
         for request in requests:
+            # Obtener información del remitente
             sender = await users_collection.find_one({"_id": ObjectId(request["sender_id"])})
+            # Obtener información del receptor
+            receiver = await users_collection.find_one({"_id": ObjectId(request["receiver_id"])})
+            
             request["id"] = str(request["_id"])
+            # Agregar información del remitente
             request["senderUsername"] = sender["username"] if sender else "Unknown"
             request["senderProfileImage"] = sender.get("profile_image_url") if sender else None
+            # Agregar información del receptor
+            request["receiverUsername"] = receiver["username"] if receiver else "Unknown"
+            request["receiverProfileImage"] = receiver.get("profile_image_url") if receiver else None
             del request["_id"]
             response.append(FriendRequest(**request))
             
