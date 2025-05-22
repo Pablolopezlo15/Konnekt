@@ -168,12 +168,19 @@ object ImageUploader {
                 Log.d(TAG, "Tamaño del archivo: ${file.length()} bytes")
                 
                 val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
-                // Usamos el endpoint general de upload en lugar del específico de perfil
-                val part = MultipartBody.Part.createFormData("image", "profile_${userId}.jpg", requestBody)
+                val part = MultipartBody.Part.createFormData("image", file.name, requestBody)
                 
                 try {
                     Log.d(TAG, "Iniciando petición al servidor")
-                    val response = KonnektApi.retrofitService.uploadImage(part)
+                    // Obtener el token de autenticación
+                    val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                        .getString("token", "") ?: throw ImageUploadError.UnknownError(Exception("No token found"))
+                        
+                    val response = KonnektApi.retrofitService.uploadProfileImage(
+                        authorization = "Bearer $token",
+                        image = part,
+                        userId = userId
+                    )
                     Log.d(TAG, "Imagen de perfil subida exitosamente. URL: ${response.imageUrl}")
                     response.imageUrl
                 } catch (e: Exception) {

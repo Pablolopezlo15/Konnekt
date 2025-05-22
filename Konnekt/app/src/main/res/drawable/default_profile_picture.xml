@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <!-- Fondo circular gris -->
+    <solid android:color="#B0BEC5" />
+    <!-- Borde opcional -->
+    <stroke
+        android:width="8dp"
+        android:color="#78909C" />
+    <!-- Tamaño del drawable -->
+    <size
+        android:width="200dp"
+        android:height="200dp" />
+</shape>

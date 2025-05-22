@@ -11,18 +11,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import pl.konnekt.R
+import pl.konnekt.config.AppConfig
 import pl.konnekt.models.User
 import pl.konnekt.navigation.Screen
 import pl.konnekt.ui.theme.KonnektTheme
-import pl.konnekt.utils.TokenDecoder
-import androidx.lifecycle.viewmodel.compose.viewModel
+import pl.konnekt.utils.CoilConfig
+import pl.konnekt.viewmodel.PostViewModel
 import pl.konnekt.viewmodel.UserViewModel
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -30,19 +35,18 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.layout.ContentScale
-import coil.request.ImageRequest
-import pl.konnekt.config.AppConfig
-import pl.konnekt.viewmodel.PostViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.ui.text.style.TextAlign
-import pl.konnekt.ui.components.EditProfileDialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.imageLoader
+
 @Composable
 fun ProfileScreen(
-    navController: NavController, 
-    user: User, 
+    navController: NavController,
+    user: User,
     onLogout: () -> Unit = {},
     currentUserId: String? = null,
     viewModel: UserViewModel = viewModel(),
@@ -64,6 +68,9 @@ fun ProfileScreen(
             viewModel.loadUserProfile(user.id, currentUserId)
             viewModelPost.getUserPosts(user.id, context)
         }
+        // Limpiar caché de Coil para descartar problemas de caché
+        context.imageLoader.memoryCache?.clear()
+        context.imageLoader.diskCache?.clear()
     }
 
     val posts by viewModelPost.posts.collectAsState()
@@ -91,30 +98,67 @@ fun ProfileScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             } else {
+                val imageUrl = if (!displayUser.profileImageUrl.isNullOrEmpty()) {
+                    "${AppConfig.BASE_URL}${displayUser.profileImageUrl}"
+                } else {
+                    null
+                }
+                Log.d("ProfileScreen", "Display User: $displayUser")
+                Log.d("ProfileScreen", "Formatted Image URL: $imageUrl")
+
                 Row {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data("${AppConfig.BASE_URL}${displayUser.profileImageUrl}")
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Profile picture of ${displayUser.username}",
-                        modifier = Modifier
-                            .size(90.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable(enabled = isCurrentUser) {
-                                if (isCurrentUser) {
-                                    showEditDialog.value = true
-                                }
+                    if (imageUrl != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(imageUrl)
+                                .crossfade(true)
+                                .memoryCacheKey(imageUrl)
+                                .diskCacheKey(imageUrl)
+                                .error(R.drawable.default_profile_image)
+                                .placeholder(R.drawable.default_profile_image)
+                                .build(),
+                            imageLoader = CoilConfig.getImageLoader(context), // Usar ImageLoader personalizado
+                            contentDescription = "Profile picture of ${displayUser.username}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable(enabled = isCurrentUser) {
+                                    if (isCurrentUser) {
+                                        showEditDialog.value = true
+                                    }
+                                },
+                            onError = {
+                                Log.e("ProfileScreen", "Error loading profile image: ${it.result.throwable}")
+                            },
+                            onSuccess = {
+                                Log.d("ProfileScreen", "Profile image loaded successfully: $imageUrl")
                             }
-                    )
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.default_profile_image),
+                            contentDescription = "Profile picture of ${displayUser.username}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(90.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable(enabled = isCurrentUser) {
+                                    if (isCurrentUser) {
+                                        showEditDialog.value = true
+                                    }
+                                }
+                        )
+                    }
                     Column {
                         Text(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 16.dp),
                             text = displayUser.username,
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleLarge
                         )
                         Row(
                             modifier = Modifier
@@ -145,7 +189,7 @@ fun ProfileScreen(
                                 val buttonEnabled = !isLoading && followRequestStatus != "pending"
 
                                 Button(
-                                    onClick = { 
+                                    onClick = {
                                         currentUserId?.let { cuid ->
                                             if (isFollowing) {
                                                 viewModel.unfollowUser(displayUser.id, cuid)
@@ -188,7 +232,7 @@ fun ProfileScreen(
                                 }
 
                                 Button(
-                                    onClick = { 
+                                    onClick = {
                                         navController.navigate(Screen.Chat.createRoute(user.id))
                                     },
                                     modifier = Modifier
@@ -258,6 +302,8 @@ fun ProfileScreen(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(posts) { post ->
+                            val postImageUrl = "${AppConfig.BASE_URL}${post.imageUrl}"
+                            Log.d("ProfileScreen", "Loading post image: $postImageUrl")
                             Box(
                                 modifier = Modifier
                                     .aspectRatio(1f)
@@ -268,15 +314,47 @@ fun ProfileScreen(
                                         //navController.navigate(Screen.PostDetail.createRoute(post.id))
                                     }
                             ) {
+                                var isLoading by remember { mutableStateOf(true) }
+                                var imageLoadError by remember { mutableStateOf(false) }
+
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
-                                        .data("${AppConfig.BASE_URL}${post.imageUrl}")
+                                        .data(postImageUrl)
                                         .crossfade(true)
+                                        .allowHardware(false)
+                                        .allowRgb565(true)
+                                        .memoryCacheKey(postImageUrl)
+                                        .diskCacheKey(postImageUrl)
+                                        .error(R.drawable.default_post_image)
+                                        .placeholder(R.drawable.default_post_image)
                                         .build(),
+                                    imageLoader = CoilConfig.getImageLoader(context), // Usar ImageLoader personalizado
                                     contentDescription = "Post image",
+                                    contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
+                                    onLoading = { isLoading = true },
+                                    onSuccess = {
+                                        isLoading = false
+                                        Log.d("ProfileScreen", "Post image loaded successfully: $postImageUrl")
+                                    },
+                                    onError = {
+                                        Log.e("ProfileScreen", "Error loading post image: ${it.result.throwable}")
+                                        imageLoadError = true
+                                        isLoading = false
+                                    }
                                 )
+
+                                if (isLoading && !imageLoadError) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

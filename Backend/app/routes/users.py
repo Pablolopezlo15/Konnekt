@@ -175,9 +175,18 @@ async def update_profile(user_id: str, user_data: UserUpdate):
             # Delete old profile image if exists
             old_image_path = user.get("profile_image_url")
             if old_image_path:
-                full_path = os.path.join("uploads", old_image_path.split("/")[-1])
-                if os.path.exists(full_path):
-                    os.remove(full_path)
+                # Eliminar el prefijo "/uploads/" si existe
+                file_name = old_image_path.replace("/uploads/", "")
+                full_path = os.path.join("uploads", file_name)
+                try:
+                    if os.path.exists(full_path):
+                        os.remove(full_path)
+                except Exception as e:
+                    print(f"Error al eliminar imagen anterior: {str(e)}")
+                    # Continuamos con la actualización incluso si falla la eliminación
+            full_path = os.path.join("uploads", old_image_path.split("/")[-1])
+            if os.path.exists(full_path):
+                os.remove(full_path)
 
         # Validate email if provided
         if "email" in update_data:
@@ -481,19 +490,25 @@ async def get_sent_follow_requests(user_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/upload")
-async def upload_image(image: UploadFile = File(...)):
+async def upload_image(image: UploadFile = File(...), user_id: str = Query(...)):
     try:
         # Crear el directorio de uploads si no existe
         UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
         if not os.path.exists(UPLOAD_DIR):
             os.makedirs(UPLOAD_DIR)
         
-        # Generar un nombre único para el archivo
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        filename = f"{timestamp}_{image.filename}"
+        # Obtener la extensión del archivo original
+        file_extension = os.path.splitext(image.filename)[1]
+        
+        # Generar el nombre del archivo usando el ID del usuario
+        filename = f"{user_id}{file_extension}"
         file_path = os.path.join(UPLOAD_DIR, filename)
         
-        # Guardar el archivo
+        # Si existe una imagen anterior con el mismo nombre, la eliminamos
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Guardar el archivo nuevo
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
         
