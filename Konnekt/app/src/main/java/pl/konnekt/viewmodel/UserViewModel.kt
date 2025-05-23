@@ -103,7 +103,7 @@ class UserViewModel : ViewModel() {
                 
                 if (updates.isEmpty()) {
                     Log.d("UserViewModel", "No changes detected, skipping update.")
-                    _error.value = "No changes to update."
+                    _error.value = "No hay cambios para actualizar."
                     return@launch
                 }
                 
@@ -114,10 +114,12 @@ class UserViewModel : ViewModel() {
             } catch (e: retrofit2.HttpException) {
                 if (e.code() == 304) {
                     Log.d("UserViewModel", "Profile not modified, no changes needed.")
-                    _error.value = "Profile not modified, no changes needed."
-                } else {
+                    _error.value = "El perfil no fue modificado, no se necesitan cambios."
+                } else if (e.code() == 500) {
                     Log.e("UserViewModel", "HTTP error code: ${e.code()}")
                     Log.e("UserViewModel", "HTTP error body: ${e.response()?.errorBody()?.string()}")
+                    _error.value = "Error en el servidor al actualizar la imagen. Por favor, inténtalo de nuevo más tarde."
+                } else {
                     _error.value = "Error al actualizar el perfil: ${e.message}"
                 }
             } catch (e: Exception) {

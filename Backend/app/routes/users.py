@@ -172,21 +172,21 @@ async def update_profile(user_id: str, user_data: UserUpdate):
 
         # Handle profile image update
         if "profile_image_url" in update_data:
-            # Delete old profile image if exists
+            # Asegurarse de que la ruta de la imagen comience con /uploads/
+            if not update_data["profile_image_url"].startswith("/uploads/"):
+                update_data["profile_image_url"] = f"/uploads/{update_data['profile_image_url'].split('/')[-1]}"
+
+            # Solo intentar eliminar la imagen anterior si existe y es diferente a la nueva
             old_image_path = user.get("profile_image_url")
-            if old_image_path:
-                # Eliminar el prefijo "/uploads/" si existe
-                file_name = old_image_path.replace("/uploads/", "")
-                full_path = os.path.join("uploads", file_name)
+            if old_image_path and old_image_path != update_data["profile_image_url"]:
                 try:
+                    file_name = old_image_path.replace("/uploads/", "")
+                    full_path = os.path.join("uploads", file_name)
                     if os.path.exists(full_path):
                         os.remove(full_path)
                 except Exception as e:
                     print(f"Error al eliminar imagen anterior: {str(e)}")
                     # Continuamos con la actualización incluso si falla la eliminación
-            full_path = os.path.join("uploads", old_image_path.split("/")[-1])
-            if os.path.exists(full_path):
-                os.remove(full_path)
 
         # Validate email if provided
         if "email" in update_data:

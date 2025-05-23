@@ -126,11 +126,17 @@ fun EditProfileDialog(
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { selectedImageUri = it }
+        uri?.let { 
+            selectedImageUri = it
+            Log.d("EditProfileDialog", "Imagen seleccionada: $it")
+        }
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            Log.d("EditProfileDialog", "Diálogo cerrado por el usuario")
+            onDismiss()
+        },
         title = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -165,6 +171,7 @@ fun EditProfileDialog(
                         .clickable { imagePickerLauncher.launch("image/*") }
                 ) {
                     if (selectedImageUri != null) {
+                        Log.d("EditProfileDialog", "Cargando imagen seleccionada: $selectedImageUri")
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(selectedImageUri)
@@ -178,6 +185,7 @@ fun EditProfileDialog(
                         )
                     } else {
                         val imageUrl = "${AppConfig.BASE_URL}${user.profileImageUrl}"
+                        Log.d("EditProfileDialog", "Cargando imagen de perfil actual: $imageUrl")
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(imageUrl)
@@ -189,7 +197,7 @@ fun EditProfileDialog(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                             onError = {
-                                Log.e("EditProfileDialog", "Error loading profile image", it.result.throwable)
+                                Log.e("EditProfileDialog", "Error al cargar la imagen de perfil", it.result.throwable)
                             }
                         )
                     }
@@ -281,25 +289,36 @@ fun EditProfileDialog(
                             
                             try {
                                 selectedImageUri?.let { uri ->
+                                    Log.d("EditProfileDialog", "Iniciando carga de imagen de perfil")
                                     isLoading = true
                                     val imageUrl = ImageUploader.uploadImageProfile(context, uri, user.id)
+                                    Log.d("EditProfileDialog", "Imagen subida exitosamente: $imageUrl")
                                     updates["profile_image_url"] = imageUrl
                                     context.imageLoader.memoryCache?.clear()
                                     context.imageLoader.diskCache?.clear()
+                                    Log.d("EditProfileDialog", "Cache de imágenes limpiado")
                                 }
+                                Log.d("EditProfileDialog", "Guardando actualizaciones: $updates")
                                 onSave(updates)
+                                onDismiss()
                             } catch (e: Exception) {
-                                Log.e("EditProfileDialog", "Error saving profile", e)
-                                // Mostrar un mensaje de error al usuario
+                                Log.e("EditProfileDialog", "Error al guardar el perfil", e)
                                 when (e) {
-                                    is ImageUploader.ImageUploadError.NetworkError ->
+                                    is ImageUploader.ImageUploadError.NetworkError -> {
+                                        Log.e("EditProfileDialog", "Error de red al subir imagen", e)
                                         errorMessage = "Error de conexión. Por favor, inténtalo de nuevo."
-                                    is ImageUploader.ImageUploadError.ServerError ->
+                                    }
+                                    is ImageUploader.ImageUploadError.ServerError -> {
+                                        Log.e("EditProfileDialog", "Error del servidor al subir imagen", e)
                                         errorMessage = "Error en el servidor. Por favor, inténtalo más tarde."
-                                    else -> 
+                                    }
+                                    else -> {
+                                        Log.e("EditProfileDialog", "Error desconocido al subir imagen", e)
                                         errorMessage = "Error al actualizar la foto de perfil. Por favor, inténtalo de nuevo."
+                                    }
                                 }
                             } finally {
+                                Log.d("EditProfileDialog", "Finalizando proceso de actualización")
                                 isLoading = false
                                 onDismiss()
                             }

@@ -63,7 +63,7 @@ fun ProfileScreen(
     val canViewPosts = isCurrentUser || isFollowing || !displayUser.private_account
 
     // Load user profile and posts
-    LaunchedEffect(user.id) {
+    LaunchedEffect(user.id, showEditDialog.value) {
         if (currentUserId != null) {
             viewModel.loadUserProfile(user.id, currentUserId)
             viewModelPost.getUserPosts(user.id, context)
@@ -71,6 +71,18 @@ fun ProfileScreen(
         // Limpiar caché de Coil para descartar problemas de caché
         context.imageLoader.memoryCache?.clear()
         context.imageLoader.diskCache?.clear()
+    }
+
+    // Efecto para recargar el perfil después de editar
+    LaunchedEffect(showEditDialog.value) {
+        if (!showEditDialog.value && currentUserId != null) {
+            // Solo recargamos cuando el diálogo se cierra
+            viewModel.loadUserProfile(user.id, currentUserId)
+            viewModelPost.getUserPosts(user.id, context)
+            // Limpiar caché de Coil
+            context.imageLoader.memoryCache?.clear()
+            context.imageLoader.diskCache?.clear()
+        }
     }
 
     val posts by viewModelPost.posts.collectAsState()
@@ -432,6 +444,7 @@ fun ProfileScreen(
                 user = displayUser,
                 onDismiss = { showEditDialog.value = false },
                 onSave = { updatedData ->
+                    Log.d("EditProfileDialog", "Saving updated data: $updatedData")
                     viewModel.updateProfile(user.id, updatedData)
                     showEditDialog.value = false
                 }
