@@ -104,6 +104,12 @@ interface KonnektApiService {
         @Header("Authorization") authorization: String
     ): List<Post>
 
+    @GET("posts/saved/{userId}")
+    suspend fun getSavedPosts(
+        @Header("Authorization") authorization: String,
+        @Path("userId") userId: String
+    ): List<Post>
+
     @GET("getposts/{postId}")
     suspend fun getPostDetails(
         @Header("Authorization") authorization: String,
@@ -152,9 +158,4 @@ interface KonnektApiService {
         @Path("postId") postId: String
     ): Map<String, String>
 
-    @GET("posts/saved/{userId}")
-    suspend fun getSavedPosts(
-        @Header("Authorization") authorization: String,
-        @Path("userId") userId: String
-    ): List<Post>
 }

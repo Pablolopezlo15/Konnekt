@@ -40,7 +40,7 @@ async def create_post(
         print(f"Caption: {caption}")
         print(f"Image filename: {image.filename}")
         print(f"Authorization header: {authorization}")
-        print(f"Request headers: {dict(request.headers)}")  # Now request is defined
+        print(f"Request headers: {dict(request.headers)}")
         
         if not authorization:
             raise HTTPException(
@@ -99,7 +99,8 @@ async def create_post(
             "timestamp": datetime.utcnow().isoformat(),
             "likes_count": 0,
             "comments_count": 0,
-            "is_liked": False
+            "is_liked": False,
+            "is_saved": False
         }
         
         result = await posts_collection.insert_one(post_doc)
@@ -144,6 +145,12 @@ async def get_all_posts(authorization: str | None = Header(default=None, alias="
                     "post_id": str(post["_id"])
                 }) is not None
                 
+                # Check if post is saved by the user
+                is_saved = await saved_posts_collection.find_one({
+                    "user_id": user_id,
+                    "post_id": str(post["_id"])
+                }) is not None
+                
                 post_dict = {
                     "id": str(post["_id"]),
                     "author_id": post.get("author_id", ""),
@@ -153,7 +160,8 @@ async def get_all_posts(authorization: str | None = Header(default=None, alias="
                     "timestamp": post.get("timestamp", ""),
                     "likes_count": post.get("likes_count", 0),
                     "comments_count": post.get("comments_count", 0),
-                    "is_liked": is_liked
+                    "is_liked": is_liked,
+                    "is_saved": is_saved
                 }
                 response_posts.append(post_dict)
             except Exception as post_error:
@@ -195,8 +203,13 @@ async def get_user_posts(
         
         response_posts = []
         for post in posts:
-            # Check if current user liked this post
             is_liked = await likes_collection.find_one({
+                "user_id": current_user_id,
+                "post_id": str(post["_id"])
+            }) is not None
+            
+            
+            is_saved = await saved_posts_collection.find_one({
                 "user_id": current_user_id,
                 "post_id": str(post["_id"])
             }) is not None
@@ -210,7 +223,8 @@ async def get_user_posts(
                 "timestamp": post["timestamp"],
                 "likes_count": post["likes_count"],
                 "comments_count": post["comments_count"],
-                "is_liked": is_liked
+                "is_liked": is_liked,
+                "is_saved": is_saved
             }
             response_posts.append(post_dict)
             
@@ -256,6 +270,12 @@ async def get_post(post_id: str, authorization: str | None = Header(default=None
             "post_id": post_id
         }) is not None
 
+        # Check if current user saved this post
+        is_saved = await saved_posts_collection.find_one({
+            "user_id": user_id,
+            "post_id": post_id
+        }) is not None
+
         post_dict = {
             "id": str(post["_id"]),
             "author_id": post["author_id"],
@@ -265,7 +285,8 @@ async def get_post(post_id: str, authorization: str | None = Header(default=None
             "timestamp": post["timestamp"],
             "likes_count": post["likes_count"],
             "comments_count": post["comments_count"],
-            "is_liked": is_liked
+            "is_liked": is_liked,
+            "is_saved": is_saved
         }
         print(f"Post data: {post_dict}")
         return post_dict

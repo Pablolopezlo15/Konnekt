@@ -1,1 +1,1 @@
-uvicorn main:app --host 192.168.1.54 --port 8000 --ssl-keyfile=certs/key.pem --ssl-certfile=certs/cert.pem
+uvicorn main:app --host 192.168.1.41 --port 8000 --ssl-keyfile=certs/key.pem --ssl-certfile=certs/cert.pem

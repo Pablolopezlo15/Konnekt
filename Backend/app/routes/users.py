@@ -206,7 +206,19 @@ async def update_profile(user_id: str, user_data: UserUpdate):
         )
         
         if result.modified_count == 0:
-            raise HTTPException(status_code=304, detail="Profile not modified")
+            # En lugar de lanzar una excepción, simplemente devolvemos los datos actuales del usuario
+            updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+            return UserResponse(
+                id=str(updated_user["_id"]),
+                username=updated_user["username"],
+                email=updated_user["email"],
+                profile_image_url=updated_user.get("profile_image_url"),
+                phone=updated_user.get("phone"),
+                birth_date=updated_user.get("birth_date"),
+                followers=updated_user.get("followers", []),
+                following=updated_user.get("following", []),
+                private_account=updated_user.get("private_account", False)
+            )
 
         # Get updated user data
         updated_user = await users_collection.find_one({"_id": ObjectId(user_id)})

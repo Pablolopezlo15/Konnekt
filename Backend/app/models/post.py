@@ -15,6 +15,7 @@ class PostResponse(BaseModel):
     likes_count: int
     comments_count: int
     is_liked: bool
+    is_saved: bool
 
 class CommentCreate(BaseModel):
     comment: str

@@ -33,6 +33,8 @@ import kotlinx.coroutines.withContext
 import pl.konnekt.config.AppConfig
 import pl.konnekt.utils.ImageUploader
 import androidx.compose.material.icons.filled.DateRange
+import coil.imageLoader
+import coil.request.CachePolicy
 
 @Composable
 fun EditProfileDialog(
@@ -50,6 +52,7 @@ fun EditProfileDialog(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isPrivateAccount by remember { mutableStateOf(user.private_account) }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) } // Agregar esta línea
     
     var emailError by remember { mutableStateOf<String?>(null) }
     var phoneError by remember { mutableStateOf<String?>(null) }
@@ -148,6 +151,13 @@ fun EditProfileDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                errorMessage?.let { error ->
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
                 Box(
                     modifier = Modifier
                         .size(120.dp)
@@ -159,17 +169,28 @@ fun EditProfileDialog(
                             model = ImageRequest.Builder(context)
                                 .data(selectedImageUri)
                                 .crossfade(true)
+                                .diskCachePolicy(CachePolicy.DISABLED)  
+                                .memoryCachePolicy(CachePolicy.DISABLED)  
                                 .build(),
                             contentDescription = "Selected profile picture",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
                         )
                     } else {
+                        val imageUrl = "${AppConfig.BASE_URL}${user.profileImageUrl}"
                         AsyncImage(
-                            model = "${AppConfig.BASE_URL}${user.profileImageUrl}",
+                            model = ImageRequest.Builder(context)
+                                .data(imageUrl)
+                                .crossfade(true)
+                                .diskCachePolicy(CachePolicy.DISABLED)
+                                .memoryCachePolicy(CachePolicy.DISABLED)
+                                .build(),
                             contentDescription = "Current profile picture",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            onError = {
+                                Log.e("EditProfileDialog", "Error loading profile image", it.result.throwable)
+                            }
                         )
                     }
                     
@@ -260,12 +281,24 @@ fun EditProfileDialog(
                             
                             try {
                                 selectedImageUri?.let { uri ->
+                                    isLoading = true
                                     val imageUrl = ImageUploader.uploadImageProfile(context, uri, user.id)
                                     updates["profile_image_url"] = imageUrl
+                                    context.imageLoader.memoryCache?.clear()
+                                    context.imageLoader.diskCache?.clear()
                                 }
                                 onSave(updates)
                             } catch (e: Exception) {
                                 Log.e("EditProfileDialog", "Error saving profile", e)
+                                // Mostrar un mensaje de error al usuario
+                                when (e) {
+                                    is ImageUploader.ImageUploadError.NetworkError ->
+                                        errorMessage = "Error de conexión. Por favor, inténtalo de nuevo."
+                                    is ImageUploader.ImageUploadError.ServerError ->
+                                        errorMessage = "Error en el servidor. Por favor, inténtalo más tarde."
+                                    else -> 
+                                        errorMessage = "Error al actualizar la foto de perfil. Por favor, inténtalo de nuevo."
+                                }
                             } finally {
                                 isLoading = false
                                 onDismiss()

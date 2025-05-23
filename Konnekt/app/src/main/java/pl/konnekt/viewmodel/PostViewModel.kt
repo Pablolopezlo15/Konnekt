@@ -380,6 +380,24 @@ class PostViewModel : ViewModel() {
         }
     }
 
+    fun getSavedPosts(context: Context, userId: String) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    .getString("token", "") ?: ""
+                val authHeader = "Bearer $token"
+                
+                val savedPosts = KonnektApi.retrofitService.getSavedPosts(authHeader, userId)
+                _savedPosts.value = savedPosts
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun getSavedPosts(userId: String, context: Context) {
         viewModelScope.launch {
             try {

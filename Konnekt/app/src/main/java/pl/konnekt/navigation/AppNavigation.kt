@@ -25,6 +25,7 @@ import pl.konnekt.viewmodel.UserViewModel
 import pl.konnekt.viewmodels.AuthViewModel
 import pl.konnekt.ui.screens.UserSearchScreen
 import pl.konnekt.viewmodel.UserSearchViewModel
+import pl.konnekt.ui.screens.SavedPostsScreen
 
 @Composable
 fun AppNavigation(
@@ -162,6 +163,21 @@ fun AppNavigation(
         ) { backStackEntry ->
             val postId = backStackEntry.arguments?.getString("postId") ?: ""
             CommentsScreen(postId = postId)
+        }
+
+        composable(
+            route = Screen.SavedPosts.route,
+            arguments = listOf(
+                navArgument("userId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: return@composable
+            SavedPostsScreen(
+                userId = userId,
+                onPostClick = { post ->
+                    navController.navigate(Screen.Post.createRoute(post.id))
+                }
+            )
         }
     }
 }

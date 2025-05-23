@@ -98,7 +98,7 @@ fun ProfileScreen(
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             } else {
-                val imageUrl = if (!displayUser.profileImageUrl.isNullOrEmpty()) {
+                val imageUrl = if (!displayUser.profileImageUrl.isNullOrEmpty() && displayUser.profileImageUrl != "") {
                     "${AppConfig.BASE_URL}${displayUser.profileImageUrl}"
                 } else {
                     null
@@ -108,16 +108,21 @@ fun ProfileScreen(
 
                 Row {
                     if (imageUrl != null) {
+                        var isLoading by remember { mutableStateOf(true) }
+                        var imageLoadError by remember { mutableStateOf(false) }
+
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(imageUrl)
                                 .crossfade(true)
+                                .allowHardware(false)
+                                .allowRgb565(true)
                                 .memoryCacheKey(imageUrl)
                                 .diskCacheKey(imageUrl)
                                 .error(R.drawable.default_profile_image)
                                 .placeholder(R.drawable.default_profile_image)
                                 .build(),
-                            imageLoader = CoilConfig.getImageLoader(context), // Usar ImageLoader personalizado
+                            imageLoader = CoilConfig.getImageLoader(context),
                             contentDescription = "Profile picture of ${displayUser.username}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
@@ -129,13 +134,29 @@ fun ProfileScreen(
                                         showEditDialog.value = true
                                     }
                                 },
+                            onLoading = { isLoading = true },
+                            onSuccess = {
+                                isLoading = false
+                                Log.d("ProfileScreen", "Profile image loaded successfully: $imageUrl")
+                            },
                             onError = {
                                 Log.e("ProfileScreen", "Error loading profile image: ${it.result.throwable}")
-                            },
-                            onSuccess = {
-                                Log.d("ProfileScreen", "Profile image loaded successfully: $imageUrl")
+                                imageLoadError = true
+                                isLoading = false
                             }
                         )
+
+                        if (isLoading && !imageLoadError) {
+                            Box(
+                                modifier = Modifier.size(90.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                     } else {
                         Image(
                             painter = painterResource(id = R.drawable.default_profile_image),
@@ -250,8 +271,8 @@ fun ProfileScreen(
                                 }
                             } else {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Button(
                                         onClick = { showEditDialog.value = true },
@@ -263,6 +284,20 @@ fun ProfileScreen(
                                             .height(40.dp)
                                     ) {
                                         Text("Editar Perfil")
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            navController.navigate("saved_posts/${user.id}")
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.secondary
+                                        ),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(40.dp)
+                                    ) {
+                                        Text("Posts Guardados")
                                     }
 
                                     Button(
