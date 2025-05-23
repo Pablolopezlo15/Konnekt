@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form
 from typing import List
 from ..models.post import PostCreate, PostResponse, CommentCreate, CommentResponse
-from ..database import posts_collection, comments_collection, likes_collection, saved_posts_collection
-from ..utils.auth import decode_token  # Add this import
+from ..database import users_collection, posts_collection, comments_collection, likes_collection, saved_posts_collection
+from ..utils.auth import decode_token 
 from datetime import datetime
 from bson import ObjectId
 import os
@@ -135,35 +135,51 @@ async def get_all_posts(authorization: str | None = Header(default=None, alias="
             raise HTTPException(status_code=401, detail="Invalid authentication token")
 
         user_id = user_data["user_id"]
+        
+        # Obtener la lista de usuarios que el usuario actual sigue
+        current_user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        following = current_user.get("following", [])
+        
+        # Obtener todos los posts y filtrar
         posts = await posts_collection.find().sort("timestamp", -1).to_list(100)
         
         response_posts = []
         for post in posts:
             try:
-                is_liked = await likes_collection.find_one({
-                    "user_id": user_id,
-                    "post_id": str(post["_id"])
-                }) is not None
+                # Obtener información del autor del post
+                post_author = await users_collection.find_one({"_id": ObjectId(post["author_id"])})
                 
-                # Check if post is saved by the user
-                is_saved = await saved_posts_collection.find_one({
-                    "user_id": user_id,
-                    "post_id": str(post["_id"])
-                }) is not None
-                
-                post_dict = {
-                    "id": str(post["_id"]),
-                    "author_id": post.get("author_id", ""),
-                    "author_username": post.get("author_username", ""),
-                    "image_url": post.get("image_url", ""),
-                    "caption": post.get("caption", ""),
-                    "timestamp": post.get("timestamp", ""),
-                    "likes_count": post.get("likes_count", 0),
-                    "comments_count": post.get("comments_count", 0),
-                    "is_liked": is_liked,
-                    "is_saved": is_saved
-                }
-                response_posts.append(post_dict)
+                # Verificar si debemos incluir este post:
+                # - Si la cuenta no es privada, incluir
+                # - Si la cuenta es privada y el usuario sigue al autor, incluir
+                # - Si el post es del usuario actual, incluir
+                if (not post_author.get("private_account", False) or 
+                    post["author_id"] in following or 
+                    post["author_id"] == user_id):
+                    
+                    is_liked = await likes_collection.find_one({
+                        "user_id": user_id,
+                        "post_id": str(post["_id"])
+                    }) is not None
+                    
+                    is_saved = await saved_posts_collection.find_one({
+                        "user_id": user_id,
+                        "post_id": str(post["_id"])
+                    }) is not None
+                    
+                    post_dict = {
+                        "id": str(post["_id"]),
+                        "author_id": post.get("author_id", ""),
+                        "author_username": post.get("author_username", ""),
+                        "image_url": post.get("image_url", ""),
+                        "caption": post.get("caption", ""),
+                        "timestamp": post.get("timestamp", ""),
+                        "likes_count": post.get("likes_count", 0),
+                        "comments_count": post.get("comments_count", 0),
+                        "is_liked": is_liked,
+                        "is_saved": is_saved
+                    }
+                    response_posts.append(post_dict)
             except Exception as post_error:
                 print(f"Error processing post {post.get('_id', 'unknown')}: {str(post_error)}")
                 continue
