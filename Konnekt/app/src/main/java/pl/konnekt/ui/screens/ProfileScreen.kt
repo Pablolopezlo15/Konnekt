@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.imageLoader
+import androidx.compose.material.icons.filled.Bookmark
 
 @Composable
 fun ProfileScreen(
@@ -202,6 +203,18 @@ fun ProfileScreen(
                             StatItem(label = "Posts", count = posts.size.toString())
                             StatItem(label = "Seguidores", count = displayUser.followers.size.toString())
                             StatItem(label = "Seguidos", count = displayUser.following.size.toString())
+                            if (isCurrentUser) {
+                                IconButton(
+                                    onClick = { navController.navigate("saved_posts/${user.id}") },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Bookmark,
+                                        contentDescription = "Posts Guardados",
+                                        tint = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                            }
                         }
 
                         Row(
@@ -283,7 +296,7 @@ fun ProfileScreen(
                                 }
                             } else {
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp), // Reducido de 8.dp a 4.dp
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Button(
@@ -295,22 +308,30 @@ fun ProfileScreen(
                                             .weight(1f)
                                             .height(40.dp)
                                     ) {
-                                        Text("Editar Perfil")
+                                        Text(
+                                            text = "Editar", // Acortado de "Editar Perfil"
+                                            fontSize = 12.sp, // Tamaño de fuente más pequeño
+                                            maxLines = 1
+                                        )
                                     }
 
-                                    Button(
-                                        onClick = {
-                                            navController.navigate("saved_posts/${user.id}")
-                                        },
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.secondary
-                                        ),
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(40.dp)
-                                    ) {
-                                        Text("Posts Guardados")
-                                    }
+                                    // Button(
+                                    //     onClick = {
+                                    //         navController.navigate("saved_posts/${user.id}")
+                                    //     },
+                                    //     colors = ButtonDefaults.buttonColors(
+                                    //         containerColor = MaterialTheme.colorScheme.secondary
+                                    //     ),
+                                    //     modifier = Modifier
+                                    //         .weight(1f)
+                                    //         .height(40.dp)
+                                    // ) {
+                                    //     Text(
+                                    //         text = "Guardados", // Acortado de "Posts Guardados"
+                                    //         fontSize = 12.sp,
+                                    //         maxLines = 1
+                                    //     )
+                                    // }
 
                                     Button(
                                         onClick = {
@@ -330,7 +351,11 @@ fun ProfileScreen(
                                             .weight(1f)
                                             .height(40.dp)
                                     ) {
-                                        Text("Cerrar Sesión")
+                                        Text(
+                                            text = "Salir", // Acortado de "Cerrar Sesión"
+                                            fontSize = 12.sp,
+                                            maxLines = 1
+                                        )
                                     }
                                 }
                             }

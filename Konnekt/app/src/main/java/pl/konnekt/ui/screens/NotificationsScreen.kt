@@ -24,6 +24,9 @@ import coil.request.ImageRequest
 import pl.konnekt.config.AppConfig
 import pl.konnekt.viewmodel.NotificationsViewModel
 import pl.konnekt.models.FriendRequest
+import pl.konnekt.utils.CoilConfig
+import pl.konnekt.R
+
 @Composable
 fun NotificationsScreen(
     currentUserId: String?,
@@ -144,17 +147,52 @@ fun RequestItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                var isLoading by remember { mutableStateOf(true) }
+                var imageLoadError by remember { mutableStateOf(false) }
+                var imageUrl = AppConfig.BASE_URL + (if (isPending) request.receiverProfileImage else request.senderProfileImage ?: "")
+                val context = LocalContext.current
+                
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(AppConfig.BASE_URL + (if (isPending) request.receiverProfileImage else request.senderProfileImage ?: ""))
+                        .data(imageUrl)
                         .crossfade(true)
+                        .allowHardware(false)
+                        .allowRgb565(true)
+                        .memoryCacheKey(imageUrl)
+                        .diskCacheKey(imageUrl)
+                        .error(R.drawable.default_profile_image)
+                        .placeholder(R.drawable.default_profile_image)
                         .build(),
+                    imageLoader = CoilConfig.getImageLoader(context), // Ahora context está definido
                     contentDescription = "Profile picture",
                     modifier = Modifier
                         .size(50.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    onLoading = { isLoading = true },
+                    onSuccess = { 
+                        isLoading = false
+                        Log.d("NotificationsScreen", "Profile image loaded successfully")
+                    },
+                    onError = { 
+                        Log.e("NotificationsScreen", "Error loading profile image: ${it.result.throwable}")
+                        imageLoadError = true
+                        isLoading = false
+                    }
                 )
+                
+                if (isLoading && !imageLoadError) {
+                    Box(
+                        modifier = Modifier
+                            .size(50.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
                 
                 Column {
                     Text(

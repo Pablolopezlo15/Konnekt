@@ -120,7 +120,7 @@ fun PostItem(
             modifier = Modifier.padding(8.dp)
         ) {
             AsyncImage(
-                model = "${AppConfig.BASE_URL}${post.authorId}.jpg",
+                model = "${AppConfig.BASE_URL}/uploads/${post.authorId}.jpg",
                 contentDescription = "Profile picture of ${post.authorUsername}",
                 imageLoader = imageLoader,
                 modifier = Modifier
