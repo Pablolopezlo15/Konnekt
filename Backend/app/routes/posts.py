@@ -113,6 +113,47 @@ async def create_post(
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.delete("/posts/{post_id}")
+async def delete_post(post_id: str, authorization: str | None = Header(default=None, alias="Authorization")):
+    try:
+        if not authorization:
+            raise HTTPException(
+                status_code=401,
+                detail="Authorization header is required. Use format: Bearer <token>"
+            )
+
+        if authorization.startswith("Bearer "):
+            token = authorization.split(" ")[1]
+        else:
+            token = authorization
+
+        user_data = decode_token(token)
+        user_id = user_data["user_id"]
+
+        # Verificar si el post existe
+        post = await posts_collection.find_one({"_id": ObjectId(post_id)})
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+
+        # Verificar si el usuario es el autor del post
+        if post["author_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to delete this post")
+
+        # Eliminar el archivo de imagen
+        image_path = os.path.join("../", post["image_url"])  # Ajusta la ruta según sea necesario
+        print(f"Attempting to delete image at: {image_path}")
+        if os.path.exists(image_path):
+            os.remove(image_path)
+
+        # Eliminar el post
+        await posts_collection.delete_one({"_id": ObjectId(post_id)})
+        return {"message": "Post and image deleted successfully"}
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/posts", response_model=List[PostResponse])
 async def get_all_posts(authorization: str | None = Header(default=None, alias="Authorization")):
     try:

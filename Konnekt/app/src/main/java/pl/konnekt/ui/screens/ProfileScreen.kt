@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.imageLoader
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Delete
 
 @Composable
 fun ProfileScreen(
@@ -204,14 +205,24 @@ fun ProfileScreen(
                             StatItem(label = "Seguidores", count = displayUser.followers.size.toString())
                             StatItem(label = "Seguidos", count = displayUser.following.size.toString())
                             if (isCurrentUser) {
-                                IconButton(
-                                    onClick = { navController.navigate("saved_posts/${user.id}") },
-                                    modifier = Modifier.size(40.dp)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.width(IntrinsicSize.Min)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Bookmark,
-                                        contentDescription = "Posts Guardados",
-                                        tint = MaterialTheme.colorScheme.secondary
+                                    IconButton(
+                                        onClick = { navController.navigate("saved_posts/${user.id}") },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Bookmark,
+                                            contentDescription = "Posts Guardados",
+                                            tint = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+                                    Text(
+                                        text = "Guardados",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
                             }
@@ -388,6 +399,7 @@ fun ProfileScreen(
                             ) {
                                 var isLoading by remember { mutableStateOf(true) }
                                 var imageLoadError by remember { mutableStateOf(false) }
+                                var showDeleteDialog by remember { mutableStateOf(false) }
 
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
@@ -400,21 +412,56 @@ fun ProfileScreen(
                                         .error(R.drawable.default_post_image)
                                         .placeholder(R.drawable.default_post_image)
                                         .build(),
-                                    imageLoader = CoilConfig.getImageLoader(context), // Usar ImageLoader personalizado
+                                    imageLoader = CoilConfig.getImageLoader(context),
                                     contentDescription = "Post image",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize(),
                                     onLoading = { isLoading = true },
-                                    onSuccess = {
-                                        isLoading = false
-                                        Log.d("ProfileScreen", "Post image loaded successfully: $postImageUrl")
-                                    },
+                                    onSuccess = { isLoading = false },
                                     onError = {
-                                        Log.e("ProfileScreen", "Error loading post image: ${it.result.throwable}")
                                         imageLoadError = true
                                         isLoading = false
                                     }
                                 )
+
+                                if (isCurrentUser) {
+                                    IconButton(
+                                        onClick = { showDeleteDialog = true },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Borrar post",
+                                            tint = Color.White
+                                        )
+                                    }
+                                }
+
+                                if (showDeleteDialog) {
+                                    AlertDialog(
+                                        onDismissRequest = { showDeleteDialog = false },
+                                        title = { Text("Confirmar borrado") },
+                                        text = { Text("¿Estás seguro de que quieres borrar esta publicación?") },
+                                        confirmButton = {
+                                            TextButton(
+                                                onClick = {
+                                                    viewModelPost.deletePost(post.id, context) {
+                                                        showDeleteDialog = false
+                                                    }
+                                                }
+                                            ) {
+                                                Text("Borrar")
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(onClick = { showDeleteDialog = false }) {
+                                                Text("Cancelar")
+                                            }
+                                        }
+                                    )
+                                }
 
                                 if (isLoading && !imageLoadError) {
                                     Box(

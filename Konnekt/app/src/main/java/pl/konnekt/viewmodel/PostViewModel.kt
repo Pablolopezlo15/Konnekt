@@ -415,4 +415,26 @@ class PostViewModel : ViewModel() {
             }
         }
     }
+
+    fun deletePost(postId: String, context: Context, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                _isLoading.value = true
+                val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+                    .getString("token", "") ?: ""
+                val authHeader = "Bearer $token"
+                
+                KonnektApi.retrofitService.deletePost(authHeader, postId)
+                
+                // Actualizar la lista de posts eliminando el post borrado
+                _posts.value = _posts.value.filter { it.id != postId }
+                
+                onSuccess()
+            } catch (e: Exception) {
+                _error.value = "Error al borrar el post: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 }
