@@ -44,6 +44,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.imageLoader
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
+import kotlinx.coroutines.delay
+import pl.konnekt.ui.components.CustomToast
 
 @Composable
 fun ProfileScreen(
@@ -511,14 +513,30 @@ fun ProfileScreen(
             }
         }
 
+        var showToast by remember { mutableStateOf(false) }
+        var toastMessage by remember { mutableStateOf("") }
+
+        if (showToast) {
+            CustomToast(
+                message = toastMessage,
+                icon = R.drawable.ic_success,
+                onClose = { showToast = false }
+            )
+            LaunchedEffect(Unit) {
+                delay(5000)
+                showToast = false
+            }
+        }
+
         if (showEditDialog.value && isCurrentUser) {
             EditProfileDialog(
                 user = displayUser,
                 onDismiss = { showEditDialog.value = false },
                 onSave = { updatedData ->
-                    Log.d("EditProfileDialog", "Saving updated data: $updatedData")
                     viewModel.updateProfile(user.id, updatedData)
                     showEditDialog.value = false
+                    toastMessage = "¡Perfil actualizado con éxito!"
+                    showToast = true
                 }
             )
         }

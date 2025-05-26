@@ -97,17 +97,12 @@ private fun UserItem(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Aquí podrías añadir un ícono o imagen de perfil si profileImageUrl no es null
             Column {
                 Text(
                     text = user.username,
                     style = MaterialTheme.typography.bodyLarge
                 )
-                Text(
-                    text = user.email,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
             }
         }
     }

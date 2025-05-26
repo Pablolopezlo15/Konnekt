@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form, Request
 from typing import List
 from ..models.post import PostCreate, PostResponse, CommentCreate, CommentResponse
 from ..database import users_collection, posts_collection, comments_collection, likes_collection, saved_posts_collection
@@ -14,8 +14,6 @@ router = APIRouter()
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
-
-from fastapi import APIRouter, Header, HTTPException, UploadFile, File, Form, Request  # Add Request import
 
 @router.post("/posts", response_model=PostResponse)
 async def create_post(
@@ -140,7 +138,7 @@ async def delete_post(post_id: str, authorization: str | None = Header(default=N
             raise HTTPException(status_code=403, detail="Not authorized to delete this post")
 
         # Eliminar el archivo de imagen
-        image_path = os.path.join("../", post["image_url"])  # Ajusta la ruta según sea necesario
+        image_path = os.path.join(UPLOAD_DIR, post["image_url"])  # Ajusta la ruta según sea necesario
         print(f"Attempting to delete image at: {image_path}")
         if os.path.exists(image_path):
             os.remove(image_path)
