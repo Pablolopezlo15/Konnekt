@@ -178,18 +178,12 @@ fun EditProfileDialog(
                             model = ImageRequest.Builder(context)
                                 .data(selectedImageUri)
                                 .crossfade(true)
-                                // Mantener políticas de caché deshabilitadas para la imagen seleccionada
-                                .diskCachePolicy(CachePolicy.DISABLED)
-                                .memoryCachePolicy(CachePolicy.DISABLED)
-                                // Añadir placeholder y error drawable para consistencia y UX
-                                .placeholder(R.drawable.default_profile_image)
-                                .error(R.drawable.default_profile_image)
+                                .diskCachePolicy(CachePolicy.DISABLED)  
+                                .memoryCachePolicy(CachePolicy.DISABLED)  
                                 .build(),
                             contentDescription = "Selected profile picture",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            // Usar el ImageLoader personalizado
-                            imageLoader = CoilConfig.getImageLoader(context)
+                            contentScale = ContentScale.Crop
                         )
                     } else {
                         val imageUrl = "${AppConfig.BASE_URL}${user.profileImageUrl}"
@@ -198,22 +192,15 @@ fun EditProfileDialog(
                             model = ImageRequest.Builder(context)
                                 .data(imageUrl)
                                 .crossfade(true)
-                                // Eliminar políticas de caché deshabilitadas para usar las por defecto (habilitadas)
-                                // .diskCachePolicy(CachePolicy.DISABLED)
-                                // .memoryCachePolicy(CachePolicy.DISABLED)
-                                // Añadir configuraciones de ProfileScreen para consistencia
-                                .allowHardware(false)
-                                .allowRgb565(true)
-                                .memoryCacheKey(imageUrl)
-                                .diskCacheKey(imageUrl)
-                                .error(R.drawable.default_profile_image)
-                                .placeholder(R.drawable.default_profile_image)
+                                .diskCachePolicy(CachePolicy.DISABLED)
+                                .memoryCachePolicy(CachePolicy.DISABLED)
                                 .build(),
                             contentDescription = "Current profile picture",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
-                            // Usar el ImageLoader personalizado
-                            imageLoader = CoilConfig.getImageLoader(context)
+                            onError = {
+                                Log.e("EditProfileDialog", "Error al cargar la imagen de perfil", it.result.throwable)
+                            }
                         )
                     }
                     
@@ -288,64 +275,76 @@ fun EditProfileDialog(
                 }
             }
         },
-        // Añadir el confirmButton requerido
         confirmButton = {
             Button(
                 onClick = {
                     if (validateEmail() && validatePhone() && validateBirthDate()) {
-                        isLoading = true
-                        errorMessage = null
                         scope.launch {
-                            val updatedFields = mutableMapOf<String, String>()
-                            if (email != user.email) updatedFields["email"] = email
-                            if (phone != user.phone) updatedFields["phone"] = phone
-                            if (birthDate != user.birthDate) updatedFields["birthDate"] = birthDate
-                            if (isPrivateAccount != user.private_account) updatedFields["private_account"] = isPrivateAccount.toString()
-
-                            selectedImageUri?.let {\ uri ->
-                                withContext(Dispatchers.IO) {
-                                    try {
-                                        val inputStream = context.contentResolver.openInputStream(uri)
-                                        if (inputStream != null) {
-                                            val fileExtension = context.contentResolver.getType(uri)?.substringAfterLast('/') ?: "jpg"
-                                            val uploadResult = ImageUploader.uploadImage(inputStream, fileExtension)
-                                            if (uploadResult != null) {
-                                                updatedFields["profileImageUrl"] = uploadResult.imageUrl // Asume que la respuesta tiene un campo imageUrl
-                                                Log.d("EditProfileDialog", "Imagen subida con éxito: ${uploadResult.imageUrl}")
-                                            } else {
-                                                errorMessage = "Error al subir la imagen."
-                                                Log.e("EditProfileDialog", "Error al subir la imagen: Resultado nulo")
-                                            }
-                                        } else {
-                                            errorMessage = "No se pudo abrir el stream de la imagen."
-                                            Log.e("EditProfileDialog", "No se pudo abrir el stream de la imagen.")
-                                        }
-                                    } catch (e: Exception) {
-                                        errorMessage = "Error al subir la imagen: ${e.message}"
-                                        Log.e("EditProfileDialog", "Error al subir la imagen", e)
+                            isLoading = true
+                            val updates = mutableMapOf<String, String>()
+                            if (email != user.email) updates["email"] = email
+                            if (phone != user.phone) updates["phone"] = phone
+                            if (birthDate != user.birthDate) updates["birth_date"] = birthDate
+                            if (isPrivateAccount != user.private_account) {
+                                updates["private_account"] = isPrivateAccount.toString().lowercase()
+                            }
+                            
+                            try {
+                                selectedImageUri?.let { uri ->
+                                    Log.d("EditProfileDialog", "Iniciando carga de imagen de perfil")
+                                    isLoading = true
+                                    val imageUrl = ImageUploader.uploadImageProfile(context, uri, user.id)
+                                    Log.d("EditProfileDialog", "Imagen subida exitosamente: $imageUrl")
+                                    updates["profile_image_url"] = imageUrl
+                                    context.imageLoader.memoryCache?.clear()
+                                    context.imageLoader.diskCache?.clear()
+                                    Log.d("EditProfileDialog", "Cache de imágenes limpiado")
+                                }
+                                Log.d("EditProfileDialog", "Guardando actualizaciones: $updates")
+                                onSave(updates)
+                                onDismiss()
+                            } catch (e: Exception) {
+                                Log.e("EditProfileDialog", "Error al guardar el perfil", e)
+                                when (e) {
+                                    is ImageUploader.ImageUploadError.NetworkError -> {
+                                        Log.e("EditProfileDialog", "Error de red al subir imagen", e)
+                                        errorMessage = "Error de conexión. Por favor, inténtalo de nuevo."
+                                    }
+                                    is ImageUploader.ImageUploadError.ServerError -> {
+                                        Log.e("EditProfileDialog", "Error del servidor al subir imagen", e)
+                                        errorMessage = "Error en el servidor. Por favor, inténtalo más tarde."
+                                    }
+                                    else -> {
+                                        Log.e("EditProfileDialog", "Error desconocido al subir imagen", e)
+                                        errorMessage = "Error al actualizar la foto de perfil. Por favor, inténtalo de nuevo."
                                     }
                                 }
-                            }
-
-                            if (updatedFields.isNotEmpty() && errorMessage == null) {
-                                onSave(updatedFields)
-                            } else if (errorMessage == null) {
-                                // No hay campos para actualizar y no hay error de imagen
+                            } finally {
+                                Log.d("EditProfileDialog", "Finalizando proceso de actualización")
+                                isLoading = false
                                 onDismiss()
                             }
-                            isLoading = false
                         }
-                    } else {
-                        // Validation failed, error messages are already set
                     }
                 },
-                enabled = !isLoading // Deshabilitar el botón mientras se carga
+                enabled = !isLoading && emailError == null && phoneError == null && birthDateError == null
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 } else {
                     Text("Guardar")
                 }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
+                Text("Cancelar")
             }
         }
     )
