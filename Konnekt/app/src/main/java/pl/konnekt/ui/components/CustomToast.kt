@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import pl.konnekt.R
+import android.content.Context
+import android.widget.Toast
 
 @Composable
 fun CustomToast(message: String, icon: Int, onClose: () -> Unit) {
@@ -46,5 +48,11 @@ fun CustomToast(message: String, icon: Int, onClose: () -> Unit) {
                 modifier = Modifier.size(24.dp)
             )
         }
+    }
+}
+
+class CustomToast(private val context: Context, private val message: String) {
+    fun show() {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 }

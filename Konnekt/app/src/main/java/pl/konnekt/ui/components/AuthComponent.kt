@@ -21,11 +21,14 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.rememberPagerState
+import kotlinx.coroutines.launch
 import pl.konnekt.R
 import pl.konnekt.models.LoginResponse
 import pl.konnekt.models.RegisterResponse
 import pl.konnekt.models.UserResponse
 import pl.konnekt.viewmodels.AuthViewModel
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 
 @OptIn(ExperimentalPagerApi::class)
 @Composable
@@ -34,7 +37,8 @@ fun AuthComponent(
     onLoginSuccess: (LoginResponse) -> Unit,
     onRegisterSuccess: (RegisterResponse) -> Unit,
     isLoading: Boolean,
-    error: String?
+    error: String?,
+    showToast: (String) -> Unit
 ) {
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -45,6 +49,7 @@ fun AuthComponent(
 
     val pagerState = rememberPagerState(initialPage = 0)
     val tabs = listOf("Iniciar Sesión", "Registro")
+    val scope = rememberCoroutineScope() // Get a CoroutineScope
 
     Box(
         modifier = Modifier
@@ -58,25 +63,55 @@ fun AuthComponent(
                 )
             )
     ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .align(Alignment.Center)
-            .padding(horizontal = 32.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Error Message
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.Center)
+                .padding(horizontal = 32.dp)
+                .verticalScroll(rememberScrollState()) // Agregar scroll vertical
+                .clip(RoundedCornerShape(24.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
+                        )
+                    )
+                )
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+        // Error Message con animación y mejor diseño
         error?.let { errorMessage ->
-            Text(
-                text = errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_close),
+                        contentDescription = "Error",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = errorMessage,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
         }
 
         // Tabs
@@ -142,7 +177,14 @@ fun AuthComponent(
                                 email = email,
                                 phone = phone.takeIf { it.isNotBlank() },
                                 birthDate = birthDate.takeIf { it.isNotBlank() },
-                                onSuccess = onRegisterSuccess
+                                onSuccess = {
+                                    onRegisterSuccess(it)
+                                    showToast("Registro exitoso, inicia sesión")
+                                    scope.launch {
+                                        pagerState.animateScrollToPage(0)
+                                    }
+                                },
+                                showToast = {  }
                             )
                         } else {
                             viewModel.setError("Las contraseñas no coinciden")

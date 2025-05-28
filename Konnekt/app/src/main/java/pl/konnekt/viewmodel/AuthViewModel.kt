@@ -9,7 +9,6 @@ import kotlinx.coroutines.launch
 import pl.konnekt.models.LoginResponse
 import pl.konnekt.models.RegisterResponse
 import pl.konnekt.models.UserCreate
-import pl.konnekt.models.UserResponse
 import pl.konnekt.network.KonnektApi
 
 class AuthViewModel : ViewModel() {
@@ -23,6 +22,50 @@ class AuthViewModel : ViewModel() {
 
     fun setError(message: String) {
         _error.value = message
+    }
+
+    private fun handleApiError(error: Exception): String {
+        println("Error message: ${error}")
+        return when (error) {
+            is retrofit2.HttpException -> {
+                try {
+                    val errorBody = error.response()?.errorBody()?.string()
+                    println("Error body: ${errorBody}")
+                    if (errorBody != null) {
+                        // Using proper escape sequences for the regex pattern
+                        val detailPattern = """"detail":\s*"([^"]+)""""
+                        val matchResult = Regex(detailPattern).find(errorBody)
+                        val detail = matchResult?.groupValues?.get(1)
+                        
+                        when {
+                            detail?.contains("Username already registered") == true -> 
+                                "Ya existe un usuario con ese nombre"
+                            detail?.contains("Email already registered") == true -> 
+                                "Este correo electrónico ya está registrado"
+                            detail?.contains("Phone number already registered") == true -> 
+                                "Este número de teléfono ya está registrado"
+                            detail?.contains("Invalid username format") == true -> 
+                                "El nombre de usuario solo puede contener letras, números y guiones bajos"
+                            detail?.contains("Invalid email format") == true -> 
+                                "El formato del correo electrónico no es válido"
+                            detail?.contains("Invalid phone format") == true -> 
+                                "El formato del número de teléfono no es válido"
+                            detail?.contains("User must be at least 13 years old") == true -> 
+                                "Debes tener al menos 13 años para registrarte"
+                            detail?.contains("Incorrect username or password") == true -> 
+                                "Usuario o contraseña incorrectos"
+                            detail != null -> detail
+                            else -> "Ha ocurrido un error. Por favor, inténtalo de nuevo"
+                        }
+                    } else {
+                        "Ha ocurrido un error. Por favor, inténtalo de nuevo"
+                    }
+                } catch (e: Exception) {
+                    "Ha ocurrido un error. Por favor, inténtalo de nuevo"
+                }
+            }
+            else -> "Ha ocurrido un error. Por favor, inténtalo de nuevo"
+        }
     }
 
     fun login(username: String, password: String, onSuccess: (LoginResponse) -> Unit) {
@@ -40,7 +83,7 @@ class AuthViewModel : ViewModel() {
                 loginState.value = loginResponse
                 onSuccess(loginResponse)
             } catch (e: Exception) {
-                _error.value = "Error: ${e.localizedMessage}"
+                _error.value = handleApiError(e)
             } finally {
                 _isLoading.value = false
             }
@@ -53,7 +96,8 @@ class AuthViewModel : ViewModel() {
         email: String,
         phone: String? = null,
         birthDate: String? = null,
-        onSuccess: (RegisterResponse) -> Unit
+        onSuccess: (RegisterResponse) -> Unit,
+        showToast: (String) -> Unit
     ) {
         viewModelScope.launch {
             try {
@@ -71,8 +115,9 @@ class AuthViewModel : ViewModel() {
                 )
                 registerState.value = userResponse
                 onSuccess(userResponse)
+                showToast("¡Registro exitoso! Ya puedes iniciar sesión")
             } catch (e: Exception) {
-                _error.value = "Error: ${e.localizedMessage}"
+                _error.value = handleApiError(e)
             } finally {
                 _isLoading.value = false
             }

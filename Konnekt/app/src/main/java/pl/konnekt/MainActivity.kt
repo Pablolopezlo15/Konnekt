@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -31,6 +32,7 @@ import pl.konnekt.navigation.Screen
 import pl.konnekt.ui.components.AuthComponent
 import pl.konnekt.ui.components.BottomBar
 import pl.konnekt.ui.components.ChatScreen
+import pl.konnekt.ui.components.CustomToast
 import pl.konnekt.ui.components.LocalNavController
 import pl.konnekt.ui.components.MainScreen
 import pl.konnekt.ui.components.MyTopBar
@@ -124,26 +126,37 @@ fun AuthScreen(
     val isLoading by authViewModel.isLoading.collectAsState()
     val error by authViewModel.error.collectAsState()
     val navController = rememberNavController()
+    val context = LocalContext.current
 
     AuthComponent(
         viewModel = authViewModel,
         onLoginSuccess = { loginResponse ->
             loginResponse.access_token?.let { token ->
-                onLoginSuccess(token)
-                navController.navigate("home") {
-                    popUpTo(0) { inclusive = true }
+                if (token.isNotBlank()) {
+                    onLoginSuccess(token)
+                    // Removed navController.navigate("home") as it's handled by MainActivity's onLoginSuccess
+                } else {
+                    // Removed CustomToast for "Error al iniciar sesión: Token no recibido"
                 }
+            } ?: run { // Handle null access_token for login
+                // Removed CustomToast for "Error al iniciar sesión: Token no recibido"
             }
         },
         onRegisterSuccess = { registerResponse ->
-            registerResponse.access_token.let { token ->
-                onRegisterSuccess(token)
-                navController.navigate("home") {
-                    popUpTo(0) { inclusive = true }
+            // Eliminamos la navegación a 'home' después del registro exitoso
+            registerResponse.access_token?.let { token ->
+                if (token.isNotBlank()) {
+                    onRegisterSuccess(token)
+                    // No se navega a 'home' aquí, el usuario permanecerá en la pantalla de autenticación
+                } else {
+                    // Removed CustomToast for "Error al registrar: Token no recibido"
                 }
+            } ?: run { // Handle null access_token for registration
+                // Removed CustomToast for "Error al registrar: Token no recibido"
             }
         },
         isLoading = isLoading,
-        error = error
+        error = error,
+        showToast = { message -> CustomToast(context, message).show() }
     )
 }

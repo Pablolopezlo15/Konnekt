@@ -8,13 +8,43 @@ from bson import ObjectId
 import os
 import shutil
 from app.models.user import UserUpdate
+import re
+from datetime import datetime
 
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate):
+    # Check if username already exists
     if await users_collection.find_one({"username": user.username}):
         raise HTTPException(status_code=400, detail="Username already registered")
+    
+    # Check if email already exists
+    if await users_collection.find_one({"email": user.email}):
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Check if phone already exists
+    if user.phone and await users_collection.find_one({"phone": user.phone}):
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+    
+    # Validate username format
+    if not re.match(r'^[a-zA-Z0-9_]{3,30}$', user.username):
+        raise HTTPException(status_code=400, detail="Username must be 3-30 characters long and can only contain letters, numbers, and underscores")
+    
+    # Validate email format
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', user.email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
+    
+    # Validate phone format (if provided)
+    if user.phone and not re.match(r'^\+?[1-9]\d{1,14}$', user.phone):
+        raise HTTPException(status_code=400, detail="Invalid phone number format")
+    
+    # Validate birth date (if provided)
+    if user.birth_date:
+        today = datetime.now().date()
+        age = today.year - user.birth_date.year - ((today.month, today.day) < (user.birth_date.month, user.birth_date.day))
+        if age < 13:
+            raise HTTPException(status_code=400, detail="User must be at least 13 years old")
     
     hashed_password = pwd_context.hash(user.password)
     
@@ -52,7 +82,6 @@ async def register(user: UserCreate):
     response_doc["id"] = token_data["user_id"]
     response_doc["access_token"] = access_token
     response_doc["token_type"] = "bearer"
-
     return UserResponse(**response_doc)
 
 @router.post("/login")
