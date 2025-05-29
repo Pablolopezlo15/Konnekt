@@ -80,19 +80,15 @@ fun CommentsScreen(postId: String) {
                     onValueChange = { commentText = it },
                     modifier = Modifier
                         .weight(1f)
-                        .height(56.dp),
+                        // Removed .height(56.dp) to allow expansion
+                        // Removed singleLine = true
+                        ,
                     placeholder = { Text("Escribe...") },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    // Changed ImeAction to Default for multiline input
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                     keyboardActions = KeyboardActions(
-                        onSend = {
-                            if (commentText.isNotBlank()) {
-                                postViewModel.postComment(postId, commentText, context) { success, newComment ->
-                                    if (success) {
-                                        commentText = ""
-                                    }
-                                }
-                            }
-                        }
+                        // Handle send action, potentially on a specific key or button press
+                        // The send button next to the TextField will handle the actual sending
                     ),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = MaterialTheme.colorScheme.primary,
