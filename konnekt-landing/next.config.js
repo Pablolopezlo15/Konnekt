@@ -12,10 +12,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Ensure all public assets are available
-  async rewrites() {
-    return [];
-  },
+  // Remove rewrites since they don't work with static export
 };
 
 console.log('Next.js config:', { isProd, basePath, assetPrefix: isProd ? basePath : '' });
