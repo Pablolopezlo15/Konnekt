@@ -56,7 +56,7 @@ Konnekt es una red social nativa para Android, desarrollada con Kotlin y Jetpack
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/tuusuario/Konnekt.git
+   git clone https://github.com/Pablolopezlo15/Konnekt.git
    ```
 2. Abre el proyecto en Android Studio.
 3. Configura la IP del backend en `config/AppConfig.kt`.
