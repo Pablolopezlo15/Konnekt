@@ -12,13 +12,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Ensure public assets are copied correctly
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-    };
-    return config;
+  // Ensure all public assets are available
+  async rewrites() {
+    return [];
   },
 };
+
+console.log('Next.js config:', { isProd, basePath, assetPrefix: isProd ? basePath : '' });
 
 module.exports = nextConfig;
