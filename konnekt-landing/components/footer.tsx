@@ -18,7 +18,7 @@ export default function Footer() {
           >
             <div className="flex items-center space-x-3 mb-6">
               <img 
-                src="/logo.png" 
+                src="logo.png" 
                 alt="Konnekt Logo" 
                 className="w-10 h-10 rounded-xl"
               />
