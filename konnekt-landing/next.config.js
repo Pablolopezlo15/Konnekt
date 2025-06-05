@@ -12,6 +12,13 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Ensure public assets are copied correctly
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+    };
+    return config;
+  },
 };
 
 module.exports = nextConfig;

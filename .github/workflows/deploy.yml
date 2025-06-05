@@ -42,6 +42,15 @@ jobs:
       run: npm run build
       env:
         NEXT_PUBLIC_BASE_PATH: /Konnekt
+        NODE_ENV: production
+        
+    - name: List build output
+      working-directory: ./konnekt-landing
+      run: |
+        echo "Build output contents:"
+        ls -la out/
+        echo "Public folder contents:"
+        ls -la out/_next/static/ || echo "No static folder found"
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
