@@ -14,16 +14,16 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico" },
-      { url: "/logo.png", type: "image/png" }
+      { url: "logo.png", type: "image/png" }
     ],
     shortcut: "/favicon.ico",
-    apple: "/logo.png",
+    apple: "logo.png",
   },
   openGraph: {
     title: "Konnekt - Red Social con IA",
     description: "La red social del futuro con inteligencia artificial integrada",
     type: "website",
-    images: ["/logo.png"],
+    images: ["logo.png"],
   },
     generator: 'v0.dev'
 }
