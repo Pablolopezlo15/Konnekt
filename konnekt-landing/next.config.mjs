@@ -2,8 +2,8 @@
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
-  basePath: process.env.NODE_ENV === 'production' ? '/konnekt-landing' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/konnekt-landing/' : '',
+  basePath: process.env.NODE_ENV === 'production' ? '/Konnekt' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/Konnekt/' : '',
   eslint: {
     ignoreDuringBuilds: true,
   },

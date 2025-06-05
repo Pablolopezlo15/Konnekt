@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
 permissions:
@@ -28,19 +30,26 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
+        cache-dependency-path: 'konnekt-landing/package-lock.json'
         
+    - name: Change to landing directory
+      run: cd konnekt-landing
+      
     - name: Install dependencies
+      working-directory: ./konnekt-landing
       run: npm ci --legacy-peer-deps
       
     - name: Build project
+      working-directory: ./konnekt-landing
       run: npm run build
-        - name: Setup Pages
+      
+    - name: Setup Pages
       uses: actions/configure-pages@v4
       
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: ./out
+        path: ./konnekt-landing/out
         
     - name: Deploy to GitHub Pages
       id: deployment
