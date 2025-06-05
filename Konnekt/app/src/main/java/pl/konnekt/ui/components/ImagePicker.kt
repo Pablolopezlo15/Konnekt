@@ -23,6 +23,6 @@ fun ImagePicker(
     Button(
         onClick = { launcher.launch("image/*") }
     ) {
-        Text("Select Image")
+        Text("Selecciona Imagen")
     }
 }
