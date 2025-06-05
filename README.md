@@ -4,6 +4,9 @@ Konnekt es una red social nativa para Android, desarrollada con Kotlin y Jetpack
 
 ---
 
+🌐 WEB
+<a href="https://pablolopezlo15.github.io/Konnekt/">Visita la web</a>
+
 ## 🚀 Características
 
 - Registro e inicio de sesión con validación
