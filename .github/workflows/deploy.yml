@@ -49,8 +49,12 @@ jobs:
       run: |
         echo "Build output contents:"
         ls -la out/
-        echo "Public folder contents:"
-        ls -la out/_next/static/ || echo "No static folder found"
+        echo "Checking for images in build output:"
+        find out/ -name "*.jpg" -o -name "*.png" -o -name "*.gif" || echo "No images found"
+        echo "Public folder structure:"
+        ls -la public/ || echo "No public folder found"
+        echo "Full out directory structure:"
+        find out/ -type f | head -20
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
