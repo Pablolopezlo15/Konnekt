@@ -19,19 +19,22 @@ Konnekt es una red social nativa para Android, desarrollada con Kotlin y Jetpack
 
 ## 🧪 Capturas de Pantalla
 
-> Aquí puedes añadir tus imágenes para mostrar la app funcionando.
+### Login y Registro
+
+![Login](https://i.imgur.com/nfM97ND.jpeg)
+![Registro](https://i.imgur.com/rsbLRPs.jpeg)
 
 ### 🧍 Perfil de usuario
-![Perfil](./screenshots/perfil.png)
+![Perfil](https://i.imgur.com/7xf8Jmj.jpeg)
 
 ### 📸 Publicación de post
-![Publicación](./screenshots/publicacion.png)
+![Publicación](https://i.imgur.com/Gnav96n.jpeg)
 
 ### 💬 Chat en tiempo real
-![Chat](./screenshots/chat.png)
+![Chat](https://i.imgur.com/WFwxfEb.jpeg)
 
 ### 🤖 Comentario generado por IA
-![IA](./screenshots/comentario_ia.png)
+![IA](https://i.imgur.com/wba2i5W.jpeg)
 
 ---
 
