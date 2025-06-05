@@ -10,7 +10,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Force all asset paths to use the base path
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
   },
