@@ -11,7 +11,7 @@ const features = [
   {
     title: "Login & Registro",
     description: "Autenticación segura y proceso de registro intuitivo para comenzar rápidamente",
-    image: "/login.jpg",
+    image: "login.jpg",
     badge: "Seguridad",
     icon: User,
     color: "from-blue-500 to-blue-600"
@@ -19,7 +19,7 @@ const features = [
   {
     title: "Perfil de Usuario",
     description: "Personaliza tu perfil con foto y configuración de privacidad completa",
-    image: "/profile.jpg",
+    image: "profile.jpg",
     badge: "Personalización",
     icon: User,
     color: "from-purple-500 to-purple-600"
@@ -27,7 +27,7 @@ const features = [
   {
     title: "Feed Principal",
     description: "Descubre contenido de usuarios que sigues con interacciones fluidas y naturales",
-    image: "/hero.jpg",
+    image: "hero.jpg",
     badge: "Descubrimiento",
     icon: Home,
     color: "from-green-500 to-green-600"
@@ -35,7 +35,7 @@ const features = [
   {
     title: "Chat en Tiempo Real",
     description: "Mensajería instantánea",
-    image: "/messages.jpg",
+    image: "messages.jpg",
     badge: "Comunicación",
     icon: MessageCircle,
     color: "from-orange-500 to-orange-600"
@@ -43,7 +43,7 @@ const features = [
   {
     title: "IA Comentarios",
     description: "Generación de comentarios con IA",
-    image: "/comments.jpg",
+    image: "comments.jpg",
     badge: "Innovación",
     icon: Sparkles,
     color: "from-pink-500 to-pink-600"
@@ -136,7 +136,7 @@ export default function Screenshots() {
                   <div className="relative flex justify-center">
                     <div className="relative" style={{ maxWidth: '280px' }}>
                       <img
-                        src="/hero.jpg"
+                        src="hero.jpg"
                         alt="Feed Principal de Konnekt"
                         className="w-full h-auto rounded-3xl shadow-2xl cursor-pointer hover:scale-105 transition-transform duration-300"
                         style={{ aspectRatio: '9/16' }}

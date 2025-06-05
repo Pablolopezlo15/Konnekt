@@ -32,7 +32,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <motion.div whileHover={{ scale: 1.05 }} className="flex items-center space-x-2">
           <img 
-            src="/logo.png" 
+            src="logo.png" 
             alt="Konnekt Logo" 
             className="w-10 h-10 rounded-xl"
           />

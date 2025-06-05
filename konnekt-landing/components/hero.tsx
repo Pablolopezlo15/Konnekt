@@ -27,7 +27,7 @@ export default function Hero() {
               className="flex items-center gap-4 mb-6"
             >
               <img 
-                src="/logo.png" 
+                src="logo.png" 
                 alt="Konnekt Logo" 
                 className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-2xl shadow-lg"
               />
@@ -95,7 +95,7 @@ export default function Hero() {
                 <div className="text-xs text-gray-400">Konnekt App</div>
               </div>
               <img
-                src="/hero.png"
+                src="hero.png"
                 alt="Konnekt App Preview"
                 className="w-full max-w-sm mx-auto h-auto rounded-2xl shadow-lg"
               />

@@ -47,16 +47,10 @@ jobs:
     - name: List build output
       working-directory: ./konnekt-landing
       run: |
-        echo "Build output contents:"
-        ls -la out/
-        echo "Checking for images in build output:"
-        find out/ -name "*.jpg" -o -name "*.png" -o -name "*.gif" | head -10
-        echo "Source public folder:"
-        ls -la public/ || echo "No public folder found"
-        echo "Images that should be copied:"
-        find public/ -name "*.jpg" -o -name "*.png" -o -name "*.gif" | head -10 || echo "No images in public"
-        echo "Checking if images are in out folder:"
-        ls -la out/*.jpg out/*.png 2>/dev/null || echo "No images found in out root"
+        echo "Checking HTML files for image paths:"
+        grep -r "src=\"/" out/*.html | head -5 || echo "No absolute image paths found"
+        echo "Images in build output:"
+        ls -la out/*.jpg out/*.png 2>/dev/null | head -5
         
     - name: Setup Pages
       uses: actions/configure-pages@v4

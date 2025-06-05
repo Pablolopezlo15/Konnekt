@@ -1,20 +1,19 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === 'production';
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+const basePath = isProd ? '/Konnekt' : '';
 
 const nextConfig = {
+  basePath,
+  assetPrefix: basePath,
   output: 'export',
   trailingSlash: true,
-  skipTrailingSlashRedirect: true,
-  distDir: 'out',
-  basePath: isProd ? basePath : '',
-  assetPrefix: isProd ? basePath : '',
   images: {
     unoptimized: true,
   },
-  // Remove rewrites since they don't work with static export
+  // Force all asset paths to use the base path
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath,
+  },
 };
-
-console.log('Next.js config:', { isProd, basePath, assetPrefix: isProd ? basePath : '' });
 
 module.exports = nextConfig;
