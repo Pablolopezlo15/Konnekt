@@ -129,4 +129,4 @@ uvicorn main:app --host [TU_IP] --port 8000 \
 
 ## 📄 Licencia
 
-Este proyecto está bajo la licencia MIT - consulta el archivo [LICENSE](LICENSE) para más detalles.
+Este proyecto está bajo licencia - consulta el archivo [LICENSE](LICENSE) para más detalles.
