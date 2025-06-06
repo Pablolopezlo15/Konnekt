@@ -126,7 +126,7 @@ class PostViewModel : ViewModel() {
                 val newIsLiked = response["message"] == "Post liked"
                 val likesCountChange = if (newIsLiked) 1 else -1
 
-                // Update post in the list
+                // Update post in the main posts list
                 _posts.value = _posts.value.map { post ->
                     if (post.id == postId) {
                         post.copy(
@@ -136,12 +136,27 @@ class PostViewModel : ViewModel() {
                     } else post
                 }
 
+                // Update post in the saved posts list as well
+                _savedPosts.value = _savedPosts.value.map { post ->
+                    if (post.id == postId) {
+                        post.copy(
+                            isLiked = newIsLiked,
+                            likesCount = post.likesCount + likesCountChange
+                        )
+                    } else post
+                }
+
+                // Get the correct likes count from savedPosts if available, otherwise from posts
+                val updatedLikesCount = _savedPosts.value.find { it.id == postId }?.likesCount 
+                    ?: _posts.value.find { it.id == postId }?.likesCount 
+                    ?: 0
+
                 // Notify caller of success
-                callback(true, newIsLiked, _posts.value.find { it.id == postId }?.likesCount ?: 0)
+                callback(true, newIsLiked, updatedLikesCount)
             } catch (e: Exception) {
                 _error.value = "Error liking post: ${e.message}"
                 // Notify caller of failure, revert to previous state
-                callback(false, isLiked, _posts.value.find { it.id == postId }?.likesCount ?: 0)
+                callback(false, isLiked, _savedPosts.value.find { it.id == postId }?.likesCount ?: 0)
             }
         }
     }
@@ -365,11 +380,23 @@ class PostViewModel : ViewModel() {
                 val response = KonnektApi.retrofitService.savePost(authHeader, postId)
                 val isSaved = response["message"] == "Post guardado exitosamente"
                 
-                // Actualizar el estado del post en la lista
+                // Actualizar el estado del post en la lista principal
                 _posts.value = _posts.value.map { post ->
                     if (post.id == postId) {
                         post.copy(isSaved = isSaved)
                     } else post
+                }
+                
+                // Si el post se desguarda, eliminarlo de la lista de guardados
+                // Si se guarda, actualizar su estado
+                if (!isSaved) {
+                    _savedPosts.value = _savedPosts.value.filter { it.id != postId }
+                } else {
+                    _savedPosts.value = _savedPosts.value.map { post ->
+                        if (post.id == postId) {
+                            post.copy(isSaved = isSaved)
+                        } else post
+                    }
                 }
                 
                 callback(true, isSaved)
@@ -381,24 +408,6 @@ class PostViewModel : ViewModel() {
     }
 
     fun getSavedPosts(context: Context, userId: String) {
-        viewModelScope.launch {
-            try {
-                _isLoading.value = true
-                val token = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-                    .getString("token", "") ?: ""
-                val authHeader = "Bearer $token"
-                
-                val savedPosts = KonnektApi.retrofitService.getSavedPosts(authHeader, userId)
-                _savedPosts.value = savedPosts
-            } catch (e: Exception) {
-                _error.value = e.message
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun getSavedPosts(userId: String, context: Context) {
         viewModelScope.launch {
             try {
                 _isLoading.value = true

@@ -46,7 +46,9 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
 import kotlinx.coroutines.delay
 import pl.konnekt.ui.components.CustomToast
+import pl.konnekt.models.PostItem
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     navController: NavController,
@@ -57,6 +59,7 @@ fun ProfileScreen(
     viewModelPost: PostViewModel = viewModel()
 ) {
     val showEditDialog = remember { mutableStateOf(false) }
+    var selectedPost by remember { mutableStateOf<pl.konnekt.models.Post?>(null) }
     val isCurrentUser = currentUserId == user.id
     val context = LocalContext.current
     val updatedUser by viewModel.userProfile.collectAsState()
@@ -396,7 +399,7 @@ fun ProfileScreen(
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant)
                                     .clickable {
-                                        //navController.navigate(Screen.PostDetail.createRoute(post.id))
+                                        selectedPost = post
                                     }
                             ) {
                                 var isLoading by remember { mutableStateOf(true) }
@@ -511,6 +514,36 @@ fun ProfileScreen(
                     }
                 }
             }
+        }
+
+        // Modal para mostrar el post seleccionado
+        selectedPost?.let { post ->
+            BasicAlertDialog(
+                onDismissRequest = { selectedPost = null },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surface),
+                content = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    ) {
+                        PostItem(
+                            post = post,
+                            onLikeClick = { postId, isLiked, callback ->
+                                viewModelPost.likePost(postId, context, isLiked, callback)
+                            },
+                            onCommentClick = { postId -> 
+                                navController.navigate("post/$postId/comments")
+                            },
+                            onSaveClick = { postId, isSaved, callback ->
+                                viewModelPost.savePost(postId, context, callback)
+                            }
+                        )
+                    }
+                }
+            )
         }
 
         var showToast by remember { mutableStateOf(false) }
