@@ -34,6 +34,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import java.io.Serializable
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.ZoneId
+import java.time.LocalDateTime
+import java.time.format.DateTimeParseException
 
 data class Post(
     @SerializedName("id") val id: String,
@@ -73,14 +78,44 @@ fun PostItem(
         }
     }
 
-    // Format timestamp
+    // Format timestamp with correct timezone
     val formattedDate = remember(post.timestamp) {
         try {
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-            val outputFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
-            val date = inputFormat.parse(post.timestamp)
-            outputFormat.format(date)
+            // Parse as UTC and convert to local timezone
+            val localDateTime = if (post.timestamp.endsWith("Z") || post.timestamp.contains("+")) {
+                // Already has timezone info
+                ZonedDateTime.parse(post.timestamp).withZoneSameInstant(ZoneId.systemDefault())
+            } else {
+                // Assume UTC and add Z
+                val utcDateTime = LocalDateTime.parse(post.timestamp, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
+                utcDateTime.atZone(ZoneId.of("UTC")).withZoneSameInstant(ZoneId.systemDefault())
+            }
+            
+            val now = ZonedDateTime.now()
+            val duration = java.time.Duration.between(localDateTime, now)
+            
+            when {
+                duration.toMinutes() < 1 -> "Ahora"
+                duration.toMinutes() < 60 -> "${duration.toMinutes()}m"
+                duration.toHours() < 24 -> "${duration.toHours()}h"
+                duration.toDays() < 7 -> "${duration.toDays()}d"
+                else -> localDateTime.format(DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm"))
+            }
+        } catch (e: DateTimeParseException) {
+            Log.e("PostItem", "Error parsing timestamp: ${post.timestamp}", e)
+            // Fallback to original SimpleDateFormat but with UTC timezone
+            try {
+                val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }
+                val outputFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.getDefault())
+                val date = inputFormat.parse(post.timestamp)
+                outputFormat.format(date)
+            } catch (e: Exception) {
+                post.timestamp
+            }
         } catch (e: Exception) {
+            Log.e("PostItem", "Error formatting timestamp: ${post.timestamp}", e)
             post.timestamp
         }
     }

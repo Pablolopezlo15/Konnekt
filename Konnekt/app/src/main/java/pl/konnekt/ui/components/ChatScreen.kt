@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import pl.konnekt.models.Message
@@ -19,6 +21,7 @@ import pl.konnekt.viewmodel.ChatViewModel
 import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.Calendar
 
 @Composable
 fun ChatScreen(
@@ -26,7 +29,7 @@ fun ChatScreen(
     recipientId: String, 
     userId: String, 
     recipientName: String,
-    navController: NavController // Añadir este parámetro
+    navController: NavController
 ) {
     var isInitialLoadDone by remember { mutableStateOf(false) }
     val messages by viewModel.messages.collectAsState(initial = emptyList())
@@ -40,6 +43,32 @@ fun ChatScreen(
             Log.d("ChatScreen", "Loading messages for chat with: $recipientId")
             viewModel.loadInitialMessages("${userId}_${recipientId}")
             isInitialLoadDone = true
+        }
+    }
+
+    val groupedMessages = remember(messages) {
+        messages.sortedBy { message ->
+            try {
+                val inputFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss 'GMT' yyyy", Locale.US).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }
+                inputFormat.parse(message.timestamp)?.time ?: 0
+            } catch (e: Exception) {
+                0
+            }
+        }.groupBy { message ->
+            try {
+                val inputFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss 'GMT' yyyy", Locale.US).apply {
+                    timeZone = java.util.TimeZone.getTimeZone("UTC")
+                }
+                val date = inputFormat.parse(message.timestamp)
+                val outputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
+                    timeZone = java.util.TimeZone.getDefault()
+                }
+                outputFormat.format(date)
+            } catch (e: Exception) {
+                "unknown"
+            }
         }
     }
 
@@ -60,9 +89,15 @@ fun ChatScreen(
                     modifier = Modifier.fillMaxSize(),
                     reverseLayout = true
                 ) {
-                    items(messages.reversed()) { message ->
-                        val isSentByUser = message.sender_id == userId
-                        MessageItem(message, isSentByUser)
+                    groupedMessages.entries.reversed().forEach { (dateKey, messagesForDate) ->
+                        items(messagesForDate.reversed()) { message ->
+                            val isSentByUser = message.sender_id == userId
+                            MessageItem(message, isSentByUser)
+                        }
+                        
+                        item(key = "date_$dateKey") {
+                            DateSeparator(dateKey)
+                        }
                     }
                 }
 
@@ -139,6 +174,54 @@ fun ChatScreen(
 }
 
 @Composable
+private fun DateSeparator(dateKey: String) {
+    val displayDate = remember(dateKey) {
+        try {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(dateKey)
+            val today = Calendar.getInstance()
+            val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+            val messageDate = Calendar.getInstance().apply { time = date }
+
+            when {
+                isSameDay(today, messageDate) -> "Hoy"
+                isSameDay(yesterday, messageDate) -> "Ayer"
+                else -> SimpleDateFormat("dd 'de' MMMM", Locale.getDefault()).format(date)
+            }
+        } catch (e: Exception) {
+            dateKey
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+            ),
+            modifier = Modifier.wrapContentWidth()
+        ) {
+            Text(
+                text = displayDate,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+    }
+}
+
+private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
+    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+           cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+}
+
+@Composable
 private fun MessageItem(message: Message, isSentByUser: Boolean) {
     Row(
         modifier = Modifier
@@ -167,8 +250,12 @@ private fun MessageItem(message: Message, isSentByUser: Boolean) {
                 )
                 Text(
                     text = try {
-                        val inputFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss 'GMT' yyyy", Locale.US)
-                        val outputFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                        val inputFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss 'GMT' yyyy", Locale.US).apply {
+                            timeZone = java.util.TimeZone.getTimeZone("UTC")
+                        }
+                        val outputFormat = SimpleDateFormat("HH:mm", Locale.getDefault()).apply {
+                            timeZone = java.util.TimeZone.getDefault()
+                        }
                         val date = inputFormat.parse(message.timestamp)
                         outputFormat.format(date)
                     } catch (e: Exception) {
