@@ -300,7 +300,7 @@ fun PostItem(
                 fontSize = 14.sp
             )
             Text(
-                text = "${post.commentsCount} comments",
+                text = "${post.commentsCount} comentarios",
                 fontSize = 14.sp
             )
         }
