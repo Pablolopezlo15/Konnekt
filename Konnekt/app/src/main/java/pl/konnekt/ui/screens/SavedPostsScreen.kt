@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import pl.konnekt.config.AppConfig
 import pl.konnekt.models.Post
 import pl.konnekt.models.PostItem
@@ -24,6 +25,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import pl.konnekt.ui.components.LocalNavController
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
+import pl.konnekt.R
+import pl.konnekt.utils.CoilConfig
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,26 +65,64 @@ fun SavedPostsScreen(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            contentPadding = PaddingValues(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxWidth()
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             items(posts) { post ->
-                Surface(
+                val postImageUrl = "${AppConfig.BASE_URL}${post.imageUrl}"
+                Log.d("SavedPostsScreen", "Loading post image: $postImageUrl")
+                
+                Box(
                     modifier = Modifier
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(8.dp)),
-                    tonalElevation = 2.dp,
-                    shadowElevation = 2.dp
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable {
+                            selectedPost = post
+                        }
                 ) {
+                    var isLoading by remember { mutableStateOf(true) }
+                    var imageLoadError by remember { mutableStateOf(false) }
+
                     AsyncImage(
-                        model = "${AppConfig.BASE_URL}${post.imageUrl}",
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(postImageUrl)
+                            .crossfade(true)
+                            .allowHardware(false)
+                            .allowRgb565(true)
+                            .memoryCacheKey(postImageUrl)
+                            .diskCacheKey(postImageUrl)
+                            .error(R.drawable.default_post_image)
+                            .placeholder(R.drawable.default_post_image)
+                            .build(),
+                        imageLoader = CoilConfig.getImageLoader(context),
                         contentDescription = "Post image",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable { selectedPost = post },
-                        contentScale = ContentScale.Crop
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                        onLoading = { isLoading = true },
+                        onSuccess = { isLoading = false },
+                        onError = {
+                            imageLoadError = true
+                            isLoading = false
+                        }
                     )
+
+                    if (isLoading && !imageLoadError) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
