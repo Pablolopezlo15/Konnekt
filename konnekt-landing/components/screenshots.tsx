@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Smartphone, MessageCircle, User, Home, Sparkles } from "lucide-react"
+import { Smartphone, MessageCircle, User, Home, Sparkles, UserPlus, Moon, Bookmark } from "lucide-react"
 import { useState } from "react"
 import ScreenshotCarousel from "./screenshot-carousel"
 
@@ -48,6 +48,38 @@ const features = [
     icon: Sparkles,
     color: "from-pink-500 to-pink-600"
   },
+  {
+    title: "Solicitudes de Seguimiento",
+    description: "Solicita seguir a otros usuarios con cuenta privada",
+    image: "solicitud.jpg",
+    badge: "Privacidad",
+    icon: UserPlus,
+    color: "from-indigo-500 to-indigo-600"
+  },
+  {
+    title: "Gestión de Solicitudes",
+    description: "Acepta o rechaza solicitudes de seguimiento fácilmente",
+    image: "requests1.jpg",
+    badge: "Control",
+    icon: UserPlus,
+    color: "from-teal-500 to-teal-600"
+  },
+  {
+    title: "Tema Claro y Oscuro",
+    description: "Adapta la apariencia de la aplicación según tu preferencia en el sistema",
+    image: "dark.jpg",
+    badge: "Personalización",
+    icon: Moon,
+    color: "from-slate-500 to-slate-600"
+  },
+  {
+    title: "Publicaciones Favoritas",
+    description: "Guarda y organiza tus publicaciones favoritas para acceder fácilmente más tarde",
+    image: "saved.jpg",
+    badge: "Organización",
+    icon: Bookmark,
+    color: "from-amber-500 to-amber-600"
+  }
 ]
 
 export default function Screenshots() {
